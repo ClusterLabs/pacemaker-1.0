@@ -1103,7 +1103,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 		<entry>Field</entry>
 		<entry>Description</entry>
               </row>
-            </thead><tbody><row>
+            </thead>
+	    <tbody>
+	      <row>
 		<entry>id</entry>
 		<entry>A unique name for the constraint</entry>
               </row>
@@ -1160,46 +1162,33 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
-            </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>A unique name for the constraint</para>
-		</entry>
+            </thead>
+	    <tbody>
+	      <row>
+		<entry>id</entry>
+		<entry>A unique name for the constraint</entry>
               </row>
               <row>
-		<entry>
-		  <para>rsc</para>
-		</entry>
-		<entry>
-		  <para>The colocation source.  If the constraint cannot be satisfied, the cluster may decide not to allow the resource to run at all.</para>
-		</entry>
+		<entry>rsc</entry>
+		<entry>The colocation source.  If the constraint cannot be satisfied, the cluster may decide not to allow the resource to run at all.</entry>
               </row>
               <row>
-		<entry>
-		  <para>with-rsc</para>
-		</entry>
-		<entry>
-		  <para>The colocation target.  The cluster will decide where to put this resource first and then decide where to put the resource in the rsc field</para>
-		</entry>
+		<entry>with-rsc</entry>
+		<entry>The colocation target.  The cluster will decide where to put this resource first and then decide where to put the resource in the rsc field</entry>
               </row>
               <row>
-		<entry>
-		  <para>score</para>
-		</entry>
-		<entry>
-		  <para>Positive values indicate the resource should run on the same node.  Negative values indicate the resources should not run on the same node.  Values of +/- INFINITY change "should" to "must".</para>
-		</entry>
-          </row></tbody></tgroup>
-      </table></section><section><title>Mandatory Placement</title>
+		<entry>score</entry>
+		<entry>Positive values indicate the resource should run on the same node.  Negative values indicate the resources should not run on the same node.  Values of +/- INFINITY change "should" to "must".</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
+	</table>
+      </section>
+      <section>
+	<title>Mandatory Placement</title>
 	<para>Mandatory placement occurs any time the constraint's score is +INFINITY or -INFINITY.  In such cases, if the constraint can't be satisfied, then the rsc resource is not permitted to run.  For score=INFINITY, this includes cases where the with-rsc resource is not active.</para>
 	<para>If you need resource1 to always run on the same machine as resource2, you would add the following constraint: </para>
 	<para>&lt;rsc_colocation id="colocate" rsc="resource1" with-rsc="resource2" score="INFINITY"/> </para>
@@ -1356,7 +1345,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   </chapter>
   <chapter id="rules">
     <title>Rules</title>
-    <anchor id="Rules"/>Rules
+    <anchor id="Rules"/>
     <para>Rules can be used to make your configuration more dynamic.  One common example is to set one value for resource-stickiness during working hours, to prevent resources from being moved back to their most preferred location, and another on weekends when no-one is around to notice an outage.  </para>
     <para>Another use of rules might be to assign machines to different processing groups (using a node attribute) based on time and to then use that attribute when creating location constraints.</para>
     <para>Each rule can contain a number of expressions, date-expressions and even other rules.  The results of the expressions are combined based on the rule's boolean-op field to determine if the rule ultimately evaluates to true or false.  What happens next depends on the context in which the rule is being used.  </para>
@@ -1364,45 +1353,29 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <tgroup cols="2">
         <thead>
           <row>
-            <entry>
-              <para>Environment Variable</para>
-            </entry>
-            <entry>
-              <para>Description</para>
-            </entry>
+            <entry>Environment Variable</entry>
+            <entry>Description</entry>
           </row>
-        </thead><tbody><row>
-            <entry>
-              <para>role</para>
-            </entry>
-            <entry>
-              <para>Limits the rule to only apply when the resource is in that role. Allowed values: <emphasis>Started</emphasis>, Slave, Master.  NOTE: A rule with role="Master" can not determine the initial location of a clone instance.  It will only affect which of the active instances will be promoted.</para>
-            </entry>
+        </thead>
+	<tbody>
+	  <row>
+            <entry>role</entry>
+            <entry>Limits the rule to only apply when the resource is in that role. Allowed values: <emphasis>Started</emphasis>, Slave, Master.  NOTE: A rule with role="Master" can not determine the initial location of a clone instance.  It will only affect which of the active instances will be promoted.</entry>
           </row>
           <row>
-            <entry>
-              <para>score</para>
-            </entry>
-            <entry>
-              <para>The score to apply if the rule evaluates to "true".  Limited to use in rules that are part of location constraints.</para>
-            </entry>
+            <entry>score</entry>
+            <entry>The score to apply if the rule evaluates to "true".  Limited to use in rules that are part of location constraints.</entry>
           </row>
           <row>
-            <entry>
-              <para>score-attribute</para>
-            </entry>
-            <entry>
-              <para>The node attribute to look up and use as a score if the rule evaluates to "true".  Limited to use in rules that are part of location constraints.</para>
-            </entry>
+            <entry>score-attribute</entry>
+            <entry>The node attribute to look up and use as a score if the rule evaluates to "true".  Limited to use in rules that are part of location constraints.</entry>
           </row>
           <row>
-            <entry>
-              <para>boolean-op</para>
-            </entry>
-            <entry>
-              <para>How to combine the result of multiple expression objects.  Allowed values: <emphasis>and</emphasis>, or</para>
-            </entry>
-      </row></tbody></tgroup>
+            <entry>boolean-op</entry>
+            <entry>How to combine the result of multiple expression objects.  Allowed values: <emphasis>and</emphasis>, or</entry>
+	  </row>
+	</tbody>
+      </tgroup>
     </table>
     <para>Properties of a rule object</para>
     <section><title>Node Attribute Expressions</title>
@@ -1411,41 +1384,23 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Field</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Field</entry>
+              <entry>Description</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>value</para>
-              </entry>
-              <entry>
-		<para>User supplied value for comparison</para>
-              </entry>
+              <entry>value</entry>
+              <entry>User supplied value for comparison</entry>
             </row>
             <row>
-              <entry>
-		<para>attribute</para>
-              </entry>
-              <entry>
-		<para>The node attribute to test</para>
-              </entry>
+              <entry>attribute</entry>
+              <entry>The node attribute to test</entry>
             </row>
             <row>
-              <entry>
-		<para>type</para>
-              </entry>
-              <entry>
-		<para>Determines how the value(s) should be tested.  Allowed values: integer, <emphasis>string</emphasis>, version</para>
-              </entry>
+              <entry>type</entry>
+              <entry>Determines how the value(s) should be tested.  Allowed values: integer, <emphasis>string</emphasis>, version</entry>
             </row>
             <row>
-              <entry>
-		<para>operation</para>
-              </entry>
+              <entry>operation</entry>
               <entry>
 		<para>The comparison to perform. Allowed values: </para>
 		<orderedlist>
@@ -1475,7 +1430,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
                   </listitem>
 		</orderedlist>
               </entry>
-        </row></tbody></tgroup>
+            </row>
+	  </tbody>
+	</tgroup>
       </table>
       <para>Properties of expression objects</para></section><section><title>Time/Date Based Expressions</title>
       <para>As the name suggests, date_expressions are used to control a resource or cluster option based on the current date/time.  They can contain an optional date_spec and/or duration object depending on the context. </para>
@@ -1483,33 +1440,19 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Field</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Field</entry>
+              <entry>Description</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>start</para>
-              </entry>
-              <entry>
-		<para>A date/time conforming to the ISO8601 specification.</para>
-              </entry>
+              <entry>start</entry>
+              <entry>A date/time conforming to the ISO8601 specification.</entry>
             </row>
             <row>
-              <entry>
-		<para>end</para>
-              </entry>
-              <entry>
-		<para>A date/time conforming to the ISO8601 specification.  Can be inferred by supplying a value for start and a duration.</para>
-              </entry>
+              <entry>end</entry>
+              <entry>A date/time conforming to the ISO8601 specification.  Can be inferred by supplying a value for start and a duration.</entry>
             </row>
             <row>
-              <entry>
-		<para>operation</para>
-              </entry>
+              <entry>operation</entry>
               <entry>
 		<para>Compares the current date/time with the start and/or end date, depending on the context.  Allowed values: </para>
 		<orderedlist>
@@ -1527,7 +1470,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
                   </listitem>
 		</orderedlist>
               </entry>
-        </row></tbody></tgroup>
+            </row>
+	  </tbody>
+	</tgroup>
       </table>
       <para>Properties of date_expression objects</para>
       <para>NOTE: Because the comparisons (except for date_spec) include the time, the eq, neq, gte and lte operators have not been implemented.</para><section><title>Date Specifications</title>
@@ -1537,94 +1482,56 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
-            </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>A unique name for the date</para>
-		</entry>
+            </thead>
+	    <tbody>
+	      <row>
+		<entry>id</entry>
+		<entry>A unique name for the date</entry>
               </row>
               <row>
-		<entry>
-		  <para>hours</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 0-23</para>
-		</entry>
+		<entry>hours</entry>
+		<entry>Allowed values: 0-23</entry>
               </row>
               <row>
-		<entry>
-		  <para>monthdays</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 0-31 (depending on current month and year)</para>
-		</entry>
+		<entry>monthdays</entry>
+		<entry>Allowed values: 0-31 (depending on current month and year)</entry>
               </row>
               <row>
-		<entry>
-		  <para>weekdays</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 1-7 (1=Monday, 7=Sunday)</para>
-		</entry>
+		<entry>weekdays</entry>
+		<entry>Allowed values: 1-7 (1=Monday, 7=Sunday)</entry>
               </row>
               <row>
-		<entry>
-		  <para>yeardays</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 1-366 (depending on the current year)</para>
-		</entry>
+		<entry>yeardays</entry>
+		<entry>Allowed values: 1-366 (depending on the current year)</entry>
               </row>
               <row>
-		<entry>
-		  <para>months</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 1-12</para>
-		</entry>
+		<entry>months</entry>
+		<entry>Allowed values: 1-12</entry>
               </row>
               <row>
-		<entry>
-		  <para>weeks</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 1-53 (depending on weekyear)</para>
-		</entry>
+		<entry>weeks</entry>
+		<entry>Allowed values: 1-53 (depending on weekyear)</entry>
               </row>
               <row>
-		<entry>
-		  <para>years</para>
-		</entry>
-		<entry>
-		  <para>Year according the Gregorian calendar</para>
-		</entry>
+		<entry>years</entry>
+		<entry>Year according the Gregorian calendar</entry>
               </row>
               <row>
-		<entry>
-		  <para>weekyears</para>
-		</entry>
+		<entry>weekyears</entry>
 		<entry>
 		  <para>May differ from Gregorian years.</para>
 		  <para>Eg. "2005-001 Ordinal" is also "2005-01-01 Gregorian" is also "2004-W53-6 Weekly" </para>
 		</entry>
               </row>
               <row>
-		<entry>
-		  <para>moon</para>
-		</entry>
-		<entry>
-		  <para>Allowed values: 0..7 (0 is new, 4 is full moon).  Seriously, you can use this.  This was implemented to demonstrate the ease with which new comparisons could be added.</para>
-		</entry>
-          </row></tbody></tgroup>
+		<entry>moon</entry>
+		<entry>Allowed values: 0..7 (0 is new, 4 is full moon).  Seriously, you can use this.  This was implemented to demonstrate the ease with which new comparisons could be added.</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
 	</table>
 	<para>Properties of date_spec objects</para></section><section><title>Durations</title>
 	<para>Durations are used to calculate a value for end when one is not supplied to in_range operations.  They contain the same fields as date_spec objects but without the limitations (ie. you can have a duration of 19 days).   Like date_specs, any field not supplied is ignored. </para>
@@ -1858,46 +1765,28 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Environment Variable</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Environment Variable</entry>
+              <entry>Description</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>CIB_user</para>
-              </entry>
-              <entry>
-		<para>The user to connect as.  Needs to be part of the hacluster group on the target host.  Defaults to <emphasis>$USER</emphasis>
-		</para>
-              </entry>
+              <entry>CIB_user</entry>
+              <entry>The user to connect as.  Needs to be part of the hacluster group on the target host.  Defaults to <emphasis>$USER</emphasis>
+		</entry>
             </row>
             <row>
-              <entry>
-		<para>CIB_password</para>
-              </entry>
-              <entry>
-		<para>The user's password.  Read from the command line if unset</para>
-              </entry>
+              <entry>CIB_password</entry>
+              <entry>The user's password.  Read from the command line if unset</entry>
             </row>
             <row>
-              <entry>
-		<para>CIB_server</para>
-              </entry>
-              <entry>
-		<para>The host to contact.  Defaults to <emphasis>localhost</emphasis>.</para>
-              </entry>
+              <entry>CIB_server</entry>
+              <entry>The host to contact.  Defaults to <emphasis>localhost</emphasis>.</entry>
             </row>
             <row>
-              <entry>
-		<para>CIB_port</para>
-              </entry>
-              <entry>
-		<para>The port on which to contact the server.  Required.</para>
-              </entry>
-        </row></tbody></tgroup>
+              <entry>CIB_port</entry>
+              <entry>The port on which to contact the server.  Required.</entry>
+            </row>
+	  </tbody>
+	</tgroup>
       </table>
       <para>Variables used to connect to remote instances of the CIB </para>
       <para>So if c001n01 is an active cluster node and is listening on 1234 for connections, and someguy is a member of the hacluster group.  Then the following would prompt for someguy's password and return the cluster's current configuration:</para>
@@ -1999,37 +1888,25 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
-            </thead><tbody><row>
-		<entry>
-		  <para>dampen</para>
-		</entry>
-		<entry>
-		  <para>The time to wait (dampening) for further changes occur.  Use this to prevent a resource from bouncing around the cluster when cluster nodes notice the loss of connectivity at slightly different times. </para>
-		</entry>
+            </thead>
+	    <tbody>
+	      <row>
+		<entry>dampen</entry>
+		<entry>The time to wait (dampening) for further changes occur.  Use this to prevent a resource from bouncing around the cluster when cluster nodes notice the loss of connectivity at slightly different times. </entry>
               </row>
               <row>
-		<entry>
-		  <para>multiplier</para>
-		</entry>
-		<entry>
-		  <para>The number by which to multiply the number of connected ping nodes by.  Useful when there are multiple ping nodes configured.</para>
-		</entry>
+		<entry>multiplier</entry>
+		<entry>The number by which to multiply the number of connected ping nodes by.  Useful when there are multiple ping nodes configured.</entry>
               </row>
               <row>
-		<entry>
-		  <para>host_list</para>
-		</entry>
-		<entry>
-		  <para>The machines to contact in order to determine the current connectivity status.  Allowed values include resolvable DNS hostnames, IPv4 and IPv6 addresses.</para>
-		</entry>
-          </row></tbody></tgroup>
+		<entry>host_list</entry>
+		<entry>The machines to contact in order to determine the current connectivity status.  Allowed values include resolvable DNS hostnames, IPv4 and IPv6 addresses.</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
 	</table>
 	<para>Standard ping options</para>
 	<para>&lt;clone id="Connected"></para>
@@ -2206,22 +2083,21 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
-            </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>Your name for the group</para>
-		</entry>
-          </row></tbody></tgroup>
-      </table></section><section><title>Options</title>
+            </thead>
+	    <tbody>
+	      <row>
+		<entry>id</entry>
+		<entry>Your name for the group</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
+	</table>
+      </section>
+      <section>
+	<title>Options</title>
 	<para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para></section><section><title>Using Groups</title><section><title>Instance Attributes</title>
 	  <para>Groups have no instance attributes, however any that are set here will be inherited by the group's children. </para></section><section><title>Contents</title>
 	  <para>Groups may only contain a collection of <link linkend="">primitive</link> cluster resources.  To refer to the child of a group resource, just use the child's id instead of the group's.</para></section><section><title>Constraints</title>
@@ -2263,87 +2139,65 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>Your name for the clone</para>
-		</entry>
-          </row></tbody></tgroup>
-      </table></section><section><title>Options</title>
+		<entry>id</entry>
+		<entry>Your name for the clone</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
+	</table>
+      </section>
+      <section>
+	<title>Options</title>
 	<para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para>
 	<table frame="all">
+	  <title>Clone specific configuration options</title>
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
-            </thead><tbody><row>
-		<entry>
-		  <para>clone-max</para>
-		</entry>
-		<entry>
-		  <para>How many copies of the resource to start.  Defaults to the number of nodes in the cluster.</para>
-		</entry>
+            </thead>
+	    <tbody>
+	      <row>
+		<entry>clone-max</entry>
+		<entry>How many copies of the resource to start.  Defaults to the number of nodes in the cluster.</entry>
               </row>
               <row>
-		<entry>
-		  <para>clone-node-max</para>
-		</entry>
-		<entry>
-		  <para>How many copies of the resource can be started on a single node.  Defaults to 1.</para>
-		</entry>
+		<entry>clone-node-max</entry>
+		<entry>How many copies of the resource can be started on a single node.  Defaults to 1.</entry>
               </row>
               <row>
-		<entry>
-		  <para>notify</para>
-		</entry>
-		<entry>
-		  <para>When stopping or starting a copy of the clone, tell all the other copies beforehand and when the action was successful. Allowed values: true, <emphasis>false</emphasis>
-		  </para>
-		</entry>
+		<entry>notify</entry>
+		<entry>When stopping or starting a copy of the clone, tell all the other copies beforehand and when the action was successful. Allowed values: true, <emphasis>false</emphasis>
+		  </entry>
               </row>
               <row>
-		<entry>
-		  <para>globally-unique</para>
-		</entry>
-		<entry>
-		  <para>Does each copy of the clone perform a different function?  Allowed values: <emphasis>true</emphasis>, false</para>
-		</entry>
+		<entry>globally-unique</entry>
+		<entry>Does each copy of the clone perform a different function?  Allowed values: <emphasis>true</emphasis>, false</entry>
               </row>
               <row>
-		<entry>
-		  <para>ordered</para>
-		</entry>
-		<entry>
-		  <para>Should the copies be started in series (instead of in parallel). Allowed values: true, <emphasis>false</emphasis>
-		  </para>
-		</entry>
+		<entry>ordered</entry>
+		<entry>Should the copies be started in series (instead of in parallel). Allowed values: true, <emphasis>false</emphasis>
+		  </entry>
               </row>
               <row>
-		<entry>
-		  <para>interleave</para>
-		</entry>
-		<entry>
-		  <para>Changes the behavior of ordering constraints (between clones/masters) so that instances can start/stop as soon as their peer instance has (rather than waiting for every instance of the other clone has).  Allowed values: true, <emphasis>false</emphasis>
-		  </para>
-		</entry>
-          </row></tbody></tgroup>
+		<entry>interleave</entry>
+		<entry>Changes the behavior of ordering constraints (between clones/masters) so that instances can start/stop as soon as their peer instance has (rather than waiting for every instance of the other clone has).  Allowed values: true, <emphasis>false</emphasis>
+		  </entry>
+              </row>
+	    </tbody>
+	  </tgroup>
 	</table>
-	<para>Clone specific configuration options</para></section><section><title>Using Clones</title><section><title>Instance Attributes</title>
+      </section>
+      <section>
+	<title>Using Clones</title>
+	<section>
+	  <title>Instance Attributes</title>
 	  <para>Clones have no instance attributes, however any that are set here will be inherited by the clone's children. </para></section><section><title>Contents</title>
 	  <para>Clones must contain exactly one group or one regular resource.</para>
 	  <para>You should never reference the name of a clone's child. If you think you need to do this, you probably need to re-evaluate your design.</para></section><section><title>Constraints</title>
@@ -2366,98 +2220,58 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <para>Supporting notifications requires the notify action to be implemented.  Once supported, the notify action will be passed a number of extra variables which, when combined with additional context, can be used to calculate the current state of the cluster and what is about to happen to it.</para>
 	  <para> </para>
 	  <table frame="all">
+	    <title>Environment variables supplied with Clone notify actions</title>
 	    <tgroup cols="2">
               <thead>
 		<row>
-		  <entry>
-                    <para>Variable</para>
-		  </entry>
-		  <entry>
-                    <para>Description</para>
-		  </entry>
+		  <entry>Variable</entry>
+		  <entry>Description</entry>
 		</row>
-              </thead><tbody><row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_type</para>
-		  </entry>
-		  <entry>
-		    <para>Allowed values: pre, post</para>
-		  </entry>
+              </thead>
+	      <tbody>
+		<row>
+		  <entry>OCF_RESKEY_CRM_meta_notify_type</entry>
+		  <entry>Allowed values: pre, post</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_operation</para>
-		  </entry>
-		  <entry>
-		    <para>Allowed values: start, stop</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_operation</entry>
+		  <entry>Allowed values: start, stop</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_start_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources to be started</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_start_resource</entry>
+		  <entry>Resources to be started</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources to be stopped</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_stop_resource</entry>
+		  <entry>Resources to be stopped</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_active_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources the that are running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_active_resource</entry>
+		  <entry>Resources the that are running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources the that are not running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_inactive_resource</entry>
+		  <entry>Resources the that are not running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_start_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources will be started</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_start_uname</entry>
+		  <entry>Nodes on which resources will be started</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_stop_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources will be stopped</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_stop_uname</entry>
+		  <entry>Nodes on which resources will be stopped</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_active_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources are running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_active_uname</entry>
+		  <entry>Nodes on which resources are running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_inactive_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources are not running</para>
-		  </entry>
-            </row></tbody></tgroup>
+		  <entry>OCF_RESKEY_CRM_meta_notify_inactive_uname</entry>
+		  <entry>Nodes on which resources are not running</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
 	  </table>
-	  <para>Environment variables supplied with Clone notify actions</para>
 	  <para>The variables come in pairs, such as OCF_RESKEY_CRM_meta_notify_start_resource and OCF_RESKEY_CRM_meta_notify_start_uname and should be treated as an array of whitespace separated elements.</para>
 	  <para>Thus in order to indicate that clone:0 will be started on sles-1, clone:2 will be started on sles-3, and clone:3 will be started on sles-2, the cluster would set</para>
 	  <para>OCF_RESKEY_CRM_meta_notify_start_resource="clone:0 clone:2 clone:3"</para>
@@ -2533,50 +2347,35 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>Your name for the multi-state resource</para>
-		</entry>
-          </row></tbody></tgroup>
-      </table></section><section><title>Options</title>
+		<entry>id</entry>
+		<entry>Your name for the multi-state resource</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
+	</table>
+      </section>
+      <section>
+	<title>Options</title>
 	<para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para>
 	<para>Options inherited from <link linkend="">clone resources</link>: clone-max, clone-node-max, notify, globally-unique, ordered, interleave</para>
 	<table frame="all">
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>master-max</para>
-		</entry>
-		<entry>
-		  <para>How many copies of the resource can be promoted to master status.  Defaults to 1.</para>
-		</entry>
+		<entry>master-max</entry>
+		<entry>How many copies of the resource can be promoted to master status.  Defaults to 1.</entry>
               </row>
               <row>
-		<entry>
-		  <para>master-node-max</para>
-		</entry>
-		<entry>
-		  <para>How many copies of the resource can be promoted to master status on a single node.  Defaults to 1.</para>
-		</entry>
+		<entry>master-node-max</entry>
+		<entry>How many copies of the resource can be promoted to master status on a single node.  Defaults to 1.</entry>
           </row></tbody></tgroup>
 	</table>
 	<para>Multi-state specific resource configuration options</para></section><section><title>Using Multi-state Resources</title><section><title>Instance Attributes</title>
@@ -2600,44 +2399,32 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	    <tgroup cols="2">
               <thead>
 		<row>
-		  <entry>
-                    <para>Field</para>
-		  </entry>
-		  <entry>
-                    <para>Description</para>
-		  </entry>
+		  <entry>Field</entry>
+		  <entry>Description</entry>
 		</row>
               </thead><tbody><row>
-		  <entry>
-		    <para>rsc-role</para>
-		  </entry>
+		  <entry>rsc-role</entry>
 		  <entry>
 		    <para>An additional attribute of colocation constraints that specifies the role that rsc must be in. </para>
 		    <para>Allowed values: <emphasis>Started</emphasis>, Master, Slave</para>
 		  </entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>with-rsc-role</para>
-		  </entry>
+		  <entry>with-rsc-role</entry>
 		  <entry>
 		    <para>An additional attribute of colocation constraints that specifies the role that with-rsc must be in.</para>
 		    <para>Allowed values: <emphasis>Started</emphasis>, Master, Slave</para>
 		  </entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>first-action</para>
-		  </entry>
+		  <entry>first-action</entry>
 		  <entry>
 		    <para>An additional attribute of ordering constraints that specifies the action that the first resource must complete before executing the specified action for the then resource. </para>
 		    <para>Allowed values: <emphasis>start</emphasis>, stop, promote, demote</para>
 		  </entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>then-action</para>
-		  </entry>
+		  <entry>then-action</entry>
 		  <entry>
 		    <para>An additional attribute of ordering constraints that specifies the action that the then resource can only execute after the first-action on the first resource has completed.</para>
 		    <para>Allowed values: start, stop, promote, demote.  Defaults to the value of first-action</para>
@@ -2669,463 +2456,251 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <para>The states can mean whatever you wish, but when the resource is started, it must come up in the mode called Slave.  From there the cluster will then decide which instances to promote into a Master.</para>
 	  <para>In addition to the Clone requirements for monitor actions, agents must also <emphasis>accurately</emphasis> report which state they are in. The cluster relies on the agent to report its status (including role) accurately and does not indicate to the agent what role it currently believes it to be in.   </para>
 	  <table frame="all">
+	    <title>Role implications of OCF return codes</title>
 	    <tgroup cols="2">
               <thead>
 		<row>
-		  <entry>
-                    <para>Monitor Return Code</para>
-		  </entry>
-		  <entry>
-                    <para>Description</para>
-		  </entry>
+		  <entry>Monitor Return Code</entry>
+		  <entry>Description</entry>
 		</row>
               </thead><tbody><row>
-		  <entry>
-		    <para>OCF_NOT_RUNNING</para>
-		  </entry>
-		  <entry>
-		    <para>Stopped</para>
-		  </entry>
+		  <entry>OCF_NOT_RUNNING</entry>
+		  <entry>Stopped</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_SUCCESS</para>
-		  </entry>
-		  <entry>
-		    <para>Running (Slave)</para>
-		  </entry>
+		  <entry>OCF_SUCCESS</entry>
+		  <entry>Running (Slave)</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RUNNING_MASTER</para>
-		  </entry>
-		  <entry>
-		    <para>Running (Master)</para>
-		  </entry>
+		  <entry>OCF_RUNNING_MASTER</entry>
+		  <entry>Running (Master)</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_FAILED_MASTER</para>
-		  </entry>
-		  <entry>
-		    <para>Failed (Master)</para>
-		  </entry>
+		  <entry>OCF_FAILED_MASTER</entry>
+		  <entry>Failed (Master)</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>Other</para>
-		  </entry>
-		  <entry>
-		    <para>Failed (Slave)</para>
-		  </entry>
+		  <entry>Other</entry>
+		  <entry>Failed (Slave)</entry>
             </row></tbody></tgroup>
 	  </table>
-	  <para>Role implications of OCF return codes</para></section><section><title>Notifications</title>
+	</section>
+	<section>
+	  <title>Notifications</title>
 	  <para>Like with clones, supporting notifications requires the notify action to be implemented.  Once supported, the notify action will be passed a number of extra variables which, when combined with additional context, can be used to calculate the current state of the cluster and what is about to happen to it. </para>
 	  <table frame="all">
+	    <title>Environment variables supplied with Master notify actions
+	      <footnote><para> Variables in bold are specific to Master resources and all behave in the same manner as described for Clone resources.</para></footnote>
+	    </title>
 	    <tgroup cols="2">
               <thead>
 		<row>
-		  <entry>
-                    <para>Variable</para>
-		  </entry>
-		  <entry>
-                    <para>Description</para>
-		  </entry>
+		  <entry>Variable</entry>
+		  <entry>Description</entry>
 		</row>
               </thead><tbody><row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_type</para>
-		  </entry>
-		  <entry>
-		    <para>Allowed values: pre, post</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_type</entry>
+		  <entry>Allowed values: pre, post</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_operation</para>
-		  </entry>
-		  <entry>
-		    <para>Allowed values: start, stop</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_operation</entry>
+		  <entry>Allowed values: start, stop</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_active_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources the that are running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_active_resource</entry>
+		  <entry>Resources the that are running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources the that are not running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_inactive_resource</entry>
+		  <entry>Resources the that are not running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_master_resource</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Resources that are running in Master mode</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_master_resource</emphasis></entry>
+		  <entry>Resources that are running in Master mode</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_slave_resource</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Resources that are running in Slave mode</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_slave_resource</emphasis></entry>
+		  <entry>Resources that are running in Slave mode</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_start_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources to be started</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_start_resource</entry>
+		  <entry>Resources to be started</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-		  </entry>
-		  <entry>
-		    <para>Resources to be stopped</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_stop_resource</entry>
+		  <entry>Resources to be stopped</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_promote_resource</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Resources to be promoted</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_promote_resource</emphasis></entry>
+		  <entry>Resources to be promoted</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_demote_resource</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Resources to be demoted</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_demote_resource</emphasis></entry>
+		  <entry>Resources to be demoted</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_start_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources will be started</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_start_uname</entry>
+		  <entry>Nodes on which resources will be started</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_stop_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources will be stopped</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_stop_uname</entry>
+		  <entry>Nodes on which resources will be stopped</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_promote_uname</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources will be promoted</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_promote_uname</emphasis></entry>
+		  <entry>Nodes on which resources will be promoted</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_demote_uname</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources will be demoted</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_demote_uname</emphasis></entry>
+		  <entry>Nodes on which resources will be demoted</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_active_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources are running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_active_uname</entry>
+		  <entry>Nodes on which resources are running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>OCF_RESKEY_CRM_meta_notify_inactive_uname</para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources are not running</para>
-		  </entry>
+		  <entry>OCF_RESKEY_CRM_meta_notify_inactive_uname</entry>
+		  <entry>Nodes on which resources are not running</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_master_uname</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources are running in Master mode</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_master_uname</emphasis></entry>
+		  <entry>Nodes on which resources are running in Master mode</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>
-                      <emphasis>OCF_RESKEY_CRM_meta_notify_slave_uname</emphasis>
-		    </para>
-		  </entry>
-		  <entry>
-		    <para>Nodes on which resources are running in Slave mode</para>
-		  </entry>
+		  <entry><emphasis>OCF_RESKEY_CRM_meta_notify_slave_uname</emphasis></entry>
+		  <entry>Nodes on which resources are running in Slave mode</entry>
             </row></tbody></tgroup>
 	  </table>
-	  <para>Environment variables supplied with Master notify actions<footnote>
-              <para> Variables in bold are specific to Master resources and all behave in the same manner as described for Clone resources.</para>
-	    </footnote>
-	</para></section><section><title>Proper Interpretation of Notification Environment Variables</title>
+	</section>
+	<section>
+	  <title>Proper Interpretation of Notification Environment Variables</title>
 	  <para>Pre-notification (demote)</para>
 	  <orderedlist>
-	    <listitem>
-              <para>Active resources: $OCF_RESKEY_CRM_meta_notify_active_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Master resources: $OCF_RESKEY_CRM_meta_notify_master_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Slave resources: $OCF_RESKEY_CRM_meta_notify_slave_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Inactive resources: $OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
+	    <listitem>Active resources: $OCF_RESKEY_CRM_meta_notify_active_resource</listitem>
+	    <listitem>Master resources: $OCF_RESKEY_CRM_meta_notify_master_resource</listitem>
+	    <listitem>Slave resources: $OCF_RESKEY_CRM_meta_notify_slave_resource</listitem>
+	    <listitem>Inactive resources: $OCF_RESKEY_CRM_meta_notify_inactive_resource</listitem>
+	    <listitem>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</listitem>
+	    <listitem>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
 	  </orderedlist>
 	  <para/>
 	  <para>Post-notification (demote) / Pre-notification (stop)</para>
 	  <orderedlist>
-	    <listitem>
-              <para>Active resources: $OCF_RESKEY_CRM_meta_notify_active_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Master resources: </para>
-	    </listitem>
+	    <listitem>Active resources: $OCF_RESKEY_CRM_meta_notify_active_resource</listitem>
+	    <listitem>Master resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_master_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_demote_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Slave resources: $OCF_RESKEY_CRM_meta_notify_slave_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Inactive resources: $OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
+	    <listitem>Slave resources: $OCF_RESKEY_CRM_meta_notify_slave_resource</listitem>
+	    <listitem>Inactive resources: $OCF_RESKEY_CRM_meta_notify_inactive_resource</listitem>
+	    <listitem>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</listitem>
+	    <listitem>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
+	    <listitem>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
 	  </orderedlist>
 	  <para/>
 	  <para>Post-notification (stop) / Pre-notification (start)</para>
 	  <orderedlist>
-	    <listitem>
-              <para>Active resources: </para>
-	    </listitem>
+	    <listitem>Active resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_active_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_stop_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Master resources: </para>
-	    </listitem>
+	    <listitem>Master resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_master_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_demote_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Slave resources: </para>
-	    </listitem>
+	    <listitem>Slave resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_slave_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_stop_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Inactive resources: </para>
-	    </listitem>
+	    <listitem>Inactive resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_stop_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
+	    <listitem>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</listitem>
+	    <listitem>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
+	    <listitem>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
 	  </orderedlist>
-	  <para/>
 	  <para>Post-notification (start) / Pre-notification (promote)</para>
 	  <orderedlist>
-	    <listitem>
-              <para>Active resources: </para>
-	    </listitem>
+	    <listitem>Active resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_active_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_start_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Master resources: </para>
-	    </listitem>
+	    <listitem>Master resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_master_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_demote_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Slave resources: </para>
-	    </listitem>
+	    <listitem>Slave resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_slave_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_start_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Inactive resources: </para>
-	    </listitem>
+	    <listitem>Inactive resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_start_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
+	    <listitem>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</listitem>
+	    <listitem>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
+	    <listitem>Resources that were started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
 	  </orderedlist>
 	  <para/>
 	  <para>Post-notification (promote)</para>
 	  <orderedlist>
-	    <listitem>
-              <para>Active resources: </para>
-	    </listitem>
+	    <listitem>Active resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_active_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_start_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Master resources: </para>
-	    </listitem>
+	    <listitem>Master resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_master_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
 	  <para>                        plus $OCF_RESKEY_CRM_meta_notify_promote_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Slave resources: </para>
-	    </listitem>
+	    <listitem>Slave resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_slave_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_start_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_promote_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Inactive resources: </para>
-	    </listitem>
+	    <listitem>Inactive resources: </listitem>
 	  </orderedlist>
 	  <para>        $OCF_RESKEY_CRM_meta_notify_inactive_resource</para>
 	  <para>                plus $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
 	  <para>                minus $OCF_RESKEY_CRM_meta_notify_start_resource </para>
 	  <orderedlist>
-	    <listitem>
-              <para>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were started: $OCF_RESKEY_CRM_meta_notify_start_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</para>
-	    </listitem>
-	    <listitem>
-              <para>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
-	    </listitem>
+	    <listitem>Resources to be started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources to be promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</listitem>
+	    <listitem>Resources to be demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources to be stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
+	    <listitem>Resources that were started: $OCF_RESKEY_CRM_meta_notify_start_resource</listitem>
+	    <listitem>Resources that were promoted: $OCF_RESKEY_CRM_meta_notify_promote_resource</listitem>
+	    <listitem>Resources that were demoted: $OCF_RESKEY_CRM_meta_notify_demote_resource</listitem>
+	    <listitem>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</listitem>
 	  </orderedlist>
 	</section>
       </section>
@@ -3137,7 +2712,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
     <section><title>Why You Need STONITH</title>
       <para>STONITH is an acronym for Shoot-The-Other-Node-In-The-Head and it protects your data from being corrupted by rouge nodes or concurrent access.</para>
       <para>Just because a node is unresponsive, this doesn't mean it isn't accessing your data.  The only way to be 100% sure that your data is safe, is to use STONITH so we can be certain that the node is truly offline, before allowing the data to be accessed from another node.</para>
-      <para>STONITH also has a role to play in the event that a clustered service cannot be stopped.  In this case, the cluster uses STONITH to force the whole node offline, thereby making it safe to start the service elsewhere.</para></section><section><title>What STONITH Device Should You Use</title>
+      <para>STONITH also has a role to play in the event that a clustered service cannot be stopped.  In this case, the cluster uses STONITH to force the whole node offline, thereby making it safe to start the service elsewhere.</para>
+    </section>
+    <section>
+      <title>What STONITH Device Should You Use</title>
       <para>It is crucial that the STONITH device can allow the cluster to differentiate between a node failure and a network one.  </para>
       <para>The biggest mistake people make in choosing a STONITH device is to use remote power switch (such as many on-board IMPI controllers) that shares power with the node it controls.  In such cases, the cluster cannot be sure if the node is really offline, or active and suffering from a network fault.</para>
       <para>Likewise, any device that relies on the machine being active (such as SSH-based "devices" used during testing) are inappropriate.</para></section><section><title>Configuring STONITH</title>
@@ -3155,15 +2733,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </orderedlist>
       <para>       The output should be XML formatted text containing additional parameter descriptions</para>
       <orderedlist>
-	<listitem>
-          <para>Create a file called stonith.xml containing a primitive resource with a class of stonith, a type of {type} and a parameter for each of the values returned in step 2</para>
-	</listitem>
-	<listitem>
-          <para>Create a clone from the primitive resource if the device can shoot more than one node<emphasis> and supports multiple simultaneous connections</emphasis>.</para>
-	</listitem>
-	<listitem>
-          <para>Upload it into the CIB using cibadmin: cibadmin -C -o resources --xml-file stonith.xml</para>
-	</listitem>
+	<listitem>Create a file called stonith.xml containing a primitive resource with a class of stonith, a type of {type} and a parameter for each of the values returned in step 2</listitem>
+	<listitem>Create a clone from the primitive resource if the device can shoot more than one node<emphasis> and supports multiple simultaneous connections</emphasis>.</listitem>
+	<listitem>Upload it into the CIB using cibadmin: cibadmin -C -o resources --xml-file stonith.xml</listitem>
       </orderedlist><section><title>Example</title>
 	<para>Assuming we have an IBM BladeCenter consisting of four nodes and the management interface is active on 10.0.0.1, then we would chose the external/ibmrsa driver in step 2 and obtain the following list of parameters</para>
 	<para># stonith -t external/ibmrsa -n</para>
@@ -3200,36 +2772,20 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Dataset</para>
-              </entry>
-              <entry>
-                <para>Authoritative Source</para>
-              </entry>
+              <entry>Dataset</entry>
+              <entry>Authoritative Source</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>node_state fields</para>
-              </entry>
-              <entry>
-		<para>crmd</para>
-              </entry>
+              <entry>node_state fields</entry>
+              <entry>crmd</entry>
             </row>
             <row>
-              <entry>
-		<para>transient_attributes tag</para>
-              </entry>
-              <entry>
-		<para>attrd</para>
-              </entry>
+              <entry>transient_attributes tag</entry>
+              <entry>attrd</entry>
             </row>
             <row>
-              <entry>
-		<para>lrm tag</para>
-              </entry>
-              <entry>
-		<para>lrmd</para>
-              </entry>
+              <entry>lrm tag</entry>
+              <entry>lrmd</entry>
         </row></tbody></tgroup>
       </table>
       <para>Authoritative Sources for State Information</para>
@@ -3238,76 +2794,40 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Field</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Field</entry>
+              <entry>Description</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>id</para>
-              </entry>
-              <entry>
-		<para>Unique identifier for the node. OpenAIS based clusters use the same value as uname, Heartbeat cluster use a human-readable (but annoying) UUID.</para>
-              </entry>
+              <entry>id</entry>
+              <entry>Unique identifier for the node. OpenAIS based clusters use the same value as uname, Heartbeat cluster use a human-readable (but annoying) UUID.</entry>
             </row>
             <row>
-              <entry>
-		<para>uname</para>
-              </entry>
-              <entry>
-		<para>The node's machine name (output from uname -n)</para>
-              </entry>
+              <entry>uname</entry>
+              <entry>The node's machine name (output from uname -n)</entry>
             </row>
             <row>
-              <entry>
-		<para>ha</para>
-              </entry>
-              <entry>
-		<para>Is the cluster software active on the node. Allowed values: active, dead</para>
-              </entry>
+              <entry>ha</entry>
+              <entry>Is the cluster software active on the node. Allowed values: active, dead</entry>
             </row>
             <row>
-              <entry>
-		<para>in_ccm</para>
-              </entry>
-              <entry>
-		<para>Is the node part of the cluster's membership. Allowed values: true, false</para>
-              </entry>
+              <entry>in_ccm</entry>
+              <entry>Is the node part of the cluster's membership. Allowed values: true, false</entry>
             </row>
             <row>
-              <entry>
-		<para>crmd</para>
-              </entry>
-              <entry>
-		<para>Is the crmd process active on the node. Allowed values: online, offline</para>
-              </entry>
+              <entry>crmd</entry>
+              <entry>Is the crmd process active on the node. Allowed values: online, offline</entry>
             </row>
             <row>
-              <entry>
-		<para>join</para>
-              </entry>
-              <entry>
-		<para>Is the node participating in hosting resources.  Allowed values: down, pending, member, banned</para>
-              </entry>
+              <entry>join</entry>
+              <entry>Is the node participating in hosting resources.  Allowed values: down, pending, member, banned</entry>
             </row>
             <row>
-              <entry>
-		<para>expected</para>
-              </entry>
-              <entry>
-		<para>Expected value for join</para>
-              </entry>
+              <entry>expected</entry>
+              <entry>Expected value for join</entry>
             </row>
             <row>
-              <entry>
-		<para>crm-debug-origin</para>
-              </entry>
-              <entry>
-		<para>Diagnostic indicator. The origin of the most recent change(s).</para>
-              </entry>
+              <entry>crm-debug-origin</entry>
+              <entry>Diagnostic indicator. The origin of the most recent change(s).</entry>
         </row></tbody></tgroup>
       </table>
       <para>Node Status Fields </para>
@@ -3335,132 +2855,68 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Field</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Field</entry>
+              <entry>Description</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>id</para>
-              </entry>
-              <entry>
-		<para>Identifier for the job constructed from the resource id, operation and interval.</para>
-              </entry>
+              <entry>id</entry>
+              <entry>Identifier for the job constructed from the resource id, operation and interval.</entry>
             </row>
             <row>
-              <entry>
-		<para>call-id</para>
-              </entry>
-              <entry>
-		<para>The job's ticket number.  Used as a sort key to determine the order in which the jobs were executed.</para>
-              </entry>
+              <entry>call-id</entry>
+              <entry>The job's ticket number.  Used as a sort key to determine the order in which the jobs were executed.</entry>
             </row>
             <row>
-              <entry>
-		<para>operation</para>
-              </entry>
-              <entry>
-		<para>The action the resource agent was invoked with.</para>
-              </entry>
+              <entry>operation</entry>
+              <entry>The action the resource agent was invoked with.</entry>
             </row>
             <row>
-              <entry>
-		<para>interval</para>
-              </entry>
-              <entry>
-		<para>The frequency, in milliseconds, at which the operation will be repeated. 0 indicates a one-off job. </para>
-              </entry>
+              <entry>interval</entry>
+              <entry>The frequency, in milliseconds, at which the operation will be repeated. 0 indicates a one-off job. </entry>
             </row>
             <row>
-              <entry>
-		<para>op-status</para>
-              </entry>
-              <entry>
-		<para>The job's status. Generally this will be either 0 (done) or -1 (pending).  Rarely used in favor of rc-code.</para>
-              </entry>
+              <entry>op-status</entry>
+              <entry>The job's status. Generally this will be either 0 (done) or -1 (pending).  Rarely used in favor of rc-code.</entry>
             </row>
             <row>
-              <entry>
-		<para>rc-code</para>
-              </entry>
-              <entry>
-		<para>The job's result.  Refer to the <link linkend="">More About OCF Resource Agents</link> Appendix for details on what the values here mean and how they are interpreted.</para>
-              </entry>
+              <entry>rc-code</entry>
+              <entry>The job's result.  Refer to the <link linkend="">More About OCF Resource Agents</link> Appendix for details on what the values here mean and how they are interpreted.</entry>
             </row>
             <row>
-              <entry>
-		<para>last-run</para>
-              </entry>
-              <entry>
-		<para>Diagnostic indicator. Machine local date/time, in seconds since epoch, at which the job was executed.</para>
-              </entry>
+              <entry>last-run</entry>
+              <entry>Diagnostic indicator. Machine local date/time, in seconds since epoch, at which the job was executed.</entry>
             </row>
             <row>
-              <entry>
-		<para>last-rc-change</para>
-              </entry>
-              <entry>
-		<para>Diagnostic indicator. Machine local date/time, in seconds since epoch, at which the job first returned the current value of rc-code  </para>
-              </entry>
+              <entry>last-rc-change</entry>
+              <entry>Diagnostic indicator. Machine local date/time, in seconds since epoch, at which the job first returned the current value of rc-code  </entry>
             </row>
             <row>
-              <entry>
-		<para>exec-time</para>
-              </entry>
-              <entry>
-		<para>Diagnostic indicator. Time, in seconds, that the job was running for </para>
-              </entry>
+              <entry>exec-time</entry>
+              <entry>Diagnostic indicator. Time, in seconds, that the job was running for </entry>
             </row>
             <row>
-              <entry>
-		<para>queue-time</para>
-              </entry>
-              <entry>
-		<para>Diagnostic indicator. Time, in seconds, that the job was queued for in the LRMd </para>
-              </entry>
+              <entry>queue-time</entry>
+              <entry>Diagnostic indicator. Time, in seconds, that the job was queued for in the LRMd </entry>
             </row>
             <row>
-              <entry>
-		<para>crm_feature_set</para>
-              </entry>
-              <entry>
-		<para>The version which this job description conforms to.  Used when processing op-digest</para>
-              </entry>
+              <entry>crm_feature_set</entry>
+              <entry>The version which this job description conforms to.  Used when processing op-digest</entry>
             </row>
             <row>
-              <entry>
-		<para>transition-key</para>
-              </entry>
-              <entry>
-		<para>A concatenation of the job's graph action number, the graph number, the expected result and the UUID of the crmd instance that scheduled it.  This is used to construct transition-magic (below).</para>
-              </entry>
+              <entry>transition-key</entry>
+              <entry>A concatenation of the job's graph action number, the graph number, the expected result and the UUID of the crmd instance that scheduled it.  This is used to construct transition-magic (below).</entry>
             </row>
             <row>
-              <entry>
-		<para>transition-magic</para>
-              </entry>
-              <entry>
-		<para>A concatenation of the job's op-status, rc-code and transition-key.  Guaranteed to be unique for the life of the cluster (which ensures it is part of CIB update notifications) and contains all the information needed for the crmd to correctly analyze and process the completed job.  Most importantly, the decomposed elements tell the crmd if the job entry was expected and whether it failed. </para>
-              </entry>
+              <entry>transition-magic</entry>
+              <entry>A concatenation of the job's op-status, rc-code and transition-key.  Guaranteed to be unique for the life of the cluster (which ensures it is part of CIB update notifications) and contains all the information needed for the crmd to correctly analyze and process the completed job.  Most importantly, the decomposed elements tell the crmd if the job entry was expected and whether it failed. </entry>
             </row>
             <row>
-              <entry>
-		<para>op-digest</para>
-              </entry>
-              <entry>
-		<para>An MD5 sum representing the parameters passed to the job.  Used to detect changes to the configuration and restart resources if necessary.</para>
-              </entry>
+              <entry>op-digest</entry>
+              <entry>An MD5 sum representing the parameters passed to the job.  Used to detect changes to the configuration and restart resources if necessary.</entry>
             </row>
             <row>
-              <entry>
-		<para>crm-debug-origin</para>
-              </entry>
-              <entry>
-		<para>Diagnostic indicator. The origin of the current values.</para>
-              </entry>
+              <entry>crm-debug-origin</entry>
+              <entry>Diagnostic indicator. The origin of the current values.</entry>
         </row></tbody></tgroup>
       </table>
       <para>Contents of an lrm_rsc_op job. </para><section><title>Simple Example</title>
@@ -3481,25 +2937,17 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>Resource history of a pingd clone with multiple jobs</para>
 	<para>When more than one job record exists, it is important to first sort them by call-id before interpret them.  Once sorted, the above example can be summarized as:</para>
 	<orderedlist>
-	  <listitem>
-            <para>A non-recurring monitor operation returning 7 (not running), with a call-id of 3</para>
-	  </listitem>
-	  <listitem>
-            <para>A stop operation returning 0 (success), with a call-id of 32</para>
-	  </listitem>
-	  <listitem>
-            <para>A start operation returning 0 (success), with a call-id of 33</para>
-	  </listitem>
-	  <listitem>
-            <para>A recurring monitor returning 0 (success), with a call-id of 34</para>
-	  </listitem>
+	  <listitem>A non-recurring monitor operation returning 7 (not running), with a call-id of 3</listitem>
+	  <listitem>A stop operation returning 0 (success), with a call-id of 32</listitem>
+	  <listitem>A start operation returning 0 (success), with a call-id of 33</listitem>
+	  <listitem>A recurring monitor returning 0 (success), with a call-id of 34</listitem>
 	</orderedlist>
 	<para>The cluster processes each job record to build up a picture of the resource's state.  After the first and second entries, it is considered stopped and after the third it considered active. Based on the last operation, we can tell that the resource is currently active. </para>
 	<para>Additionally, from the presence of a stop operation with a lower call-id than that of the start operation, we can conclude that the  resource has been restarted. Specifically this occurred as part of actions 11 and 31 of transition 11 from the crmd instance with the key 2668bbeb-06d5-40f9-936d-24cb7f87006a.  This information can be helpful for locating the relevant section of the logs when looking for the source of a failure.</para>
       </section>
     </section>
   </chapter>
-  <chapter id="faq"><title>Appendix: FAQ</title>
+  <appendix id="faq"><title>Appendix: FAQ</title>
     <section>
       <qandaset defaultlabel="qanda">
 	<qandaentry>
@@ -3596,8 +3044,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</qandaentry>
       </qandaset>
     </section>
-  </chapter>
-  <chapter id="ocf"><title>Appendix: More About OCF Resource Agents</title>
+  </appendix>
+  <appendix id="ocf"><title>Appendix: More About OCF Resource Agents</title>
     <section><title>Location of Custom Scripts</title>
       <para>OCF Resource Agents are found in /usr/lib/ocf/resource.d/{provider}.</para>
       <para>When creating your own agents, you are encouraged to create a new directory under /usr/lib/ocf/resource.d/ so that they are not confused with (or overwritten by) the agents shipped with Heartbeat. So, for example, if you chose the provider name of bigCorp and wanted a new resource named bigApp, you would create a script called /usr/lib/ocf/resource.d/bigCorp/bigApp and define a resource:</para>
@@ -3607,72 +3055,40 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="3">
           <thead>
             <row>
-              <entry>
-                <para>Action</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
-              <entry>
-                <para>Instructions</para>
-              </entry>
+              <entry>Action</entry>
+              <entry>Description</entry>
+              <entry>Instructions</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>start</para>
-              </entry>
-              <entry>
-		<para>Start the resource</para>
-              </entry>
-              <entry>
-		<para>Return 0 on success and an appropriate error code otherwise.  Must not report success until the resource is fully active.</para>
-              </entry>
+              <entry>start</entry>
+              <entry>Start the resource</entry>
+              <entry>Return 0 on success and an appropriate error code otherwise.  Must not report success until the resource is fully active.</entry>
             </row>
             <row>
-              <entry>
-		<para>stop</para>
-              </entry>
-              <entry>
-		<para>Stop the resource</para>
-              </entry>
-              <entry>
-		<para>Return 0 on success and an appropriate error code otherwise.  Must not report success until the resource is fully stopped.</para>
-              </entry>
+              <entry>stop</entry>
+              <entry>Stop the resource</entry>
+              <entry>Return 0 on success and an appropriate error code otherwise.  Must not report success until the resource is fully stopped.</entry>
             </row>
             <row>
-              <entry>
-		<para>monitor</para>
-              </entry>
-              <entry>
-		<para>Check the resource's state </para>
-              </entry>
+              <entry>monitor</entry>
+              <entry>Check the resource's state </entry>
               <entry>
 		<para>Exit 0 if the resource is running, 7 if it is stopped and anything else if it is failed. </para>
 		<para>NOTE: The monitor script should test the state of the resource on the local machine only.</para>
               </entry>
             </row>
             <row>
-              <entry>
-		<para>meta-data</para>
-              </entry>
-              <entry>
-		<para>Describe the resource</para>
-              </entry>
+              <entry>meta-data</entry>
+              <entry>Describe the resource</entry>
               <entry>
 		<para>Provide information about this resource as an XML snippet. Exit with 0.</para>
 		<para>NOTE: This is <emphasis>not</emphasis> performed as root.</para>
               </entry>
             </row>
             <row>
-              <entry>
-		<para>validate-all</para>
-              </entry>
-              <entry>
-		<para>Verify the supplied parameters are correct</para>
-              </entry>
-              <entry>
-		<para>Exit with 0 if parameters are valid, 2 if not valid, 6 if resource is not configured.</para>
-              </entry>
+              <entry>validate-all</entry>
+              <entry>Verify the supplied parameters are correct</entry>
+              <entry>Exit with 0 if parameters are valid, 2 if not valid, 6 if resource is not configured.</entry>
         </row></tbody></tgroup>
       </table>
       <para>Required OCF actions</para>
@@ -3681,59 +3097,31 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="3">
           <thead>
             <row>
-              <entry>
-                <para>Action</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
-              <entry>
-                <para>Instructions</para>
-              </entry>
+              <entry>Action</entry>
+              <entry>Description</entry>
+              <entry>Instructions</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>promote</para>
-              </entry>
-              <entry>
-		<para>Promote the local instance of a multi-state resource to the master/primary state</para>
-              </entry>
-              <entry>
-		<para>Return 0 on success</para>
-              </entry>
+              <entry>promote</entry>
+              <entry>Promote the local instance of a multi-state resource to the master/primary state</entry>
+              <entry>Return 0 on success</entry>
             </row>
             <row>
-              <entry>
-		<para>demote</para>
-              </entry>
-              <entry>
-		<para>Demote the local instance of a multi-state resource to the slave/secondary state</para>
-              </entry>
-              <entry>
-		<para>Return 0 on success</para>
-              </entry>
+              <entry>demote</entry>
+              <entry>Demote the local instance of a multi-state resource to the slave/secondary state</entry>
+              <entry>Return 0 on success</entry>
             </row>
             <row>
-              <entry>
-		<para>notify</para>
-              </entry>
-              <entry>
-		<para>Used by the cluster to send the agent pre and post notification events telling the resource what is or did just take place</para>
-              </entry>
-              <entry>
-		<para>Must not fail.  Must exit 0</para>
-              </entry>
+              <entry>notify</entry>
+              <entry>Used by the cluster to send the agent pre and post notification events telling the resource what is or did just take place</entry>
+              <entry>Must not fail.  Must exit 0</entry>
         </row></tbody></tgroup>
       </table>
       <para>Optional extra actions</para>
       <para>Some actions specified in the OCF specs are not currently used by the cluster</para>
       <orderedlist>
-	<listitem>
-          <para>reload - reload the configuration of the resource instance without disrupting the service </para>
-	</listitem>
-	<listitem>
-          <para>recover - a variant of the start action, this should try to recover a resource locally.</para>
-	</listitem>
+	<listitem>reload - reload the configuration of the resource instance without disrupting the service </listitem>
+	<listitem>recover - a variant of the start action, this should try to recover a resource locally.</listitem>
       </orderedlist>
       <para/>
       <para>Remember to use ocf-tester to verify that your new agent complies with the OCF standard properly.</para></section><section><title>
@@ -3744,48 +3132,24 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="3">
           <thead>
             <row>
-              <entry>
-                <para>Recovery Type</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
-              <entry>
-                <para>Action Taken by the Cluster</para>
-              </entry>
+              <entry>Recovery Type</entry>
+              <entry>Description</entry>
+              <entry>Action Taken by the Cluster</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>soft</para>
-              </entry>
-              <entry>
-		<para>A transient error occurred</para>
-              </entry>
-              <entry>
-		<para>Restart the resource or move it to a new location</para>
-              </entry>
+              <entry>soft</entry>
+              <entry>A transient error occurred</entry>
+              <entry>Restart the resource or move it to a new location</entry>
             </row>
             <row>
-              <entry>
-		<para>hard</para>
-              </entry>
-              <entry>
-		<para>A non-transient error that may be specific to the current node occurred</para>
-              </entry>
-              <entry>
-		<para>Move the resource elsewhere and prevent it from being retried on the current node</para>
-              </entry>
+              <entry>hard</entry>
+              <entry>A non-transient error that may be specific to the current node occurred</entry>
+              <entry>Move the resource elsewhere and prevent it from being retried on the current node</entry>
             </row>
             <row>
-              <entry>
-		<para>fatal</para>
-              </entry>
-              <entry>
-		<para> A non-transient error that will be common to all cluster nodes (I.e. a bad configuration was specified)</para>
-              </entry>
-              <entry>
-		<para>Stop the resource and prevent it from being started on any cluster node</para>
-              </entry>
+              <entry>fatal</entry>
+              <entry> A non-transient error that will be common to all cluster nodes (I.e. a bad configuration was specified)</entry>
+              <entry>Stop the resource and prevent it from being started on any cluster node</entry>
         </row></tbody></tgroup>
       </table>
       <para>Types of recovery performed by the cluster</para>
@@ -3794,280 +3158,129 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<tgroup cols="4">
           <thead>
             <row>
-              <entry>
-                <para>OCF Return Code</para>
-              </entry>
-              <entry>
-                <para>OCF Alias</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
-              <entry>
-                <para>Recovery Type</para>
-              </entry>
+              <entry>OCF Return Code</entry>
+              <entry>OCF Alias</entry>
+              <entry>Description</entry>
+              <entry>Recovery Type</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>0</para>
-              </entry>
-              <entry>
-		<para>OCF_SUCCESS</para>
-              </entry>
-              <entry>
-		<para>Success.  The command complete successfully.  This is the expected result for all start, stop, promote and demote commands.</para>
-              </entry>
-              <entry>
-		<para>soft</para>
-              </entry>
+              <entry>0</entry>
+              <entry>OCF_SUCCESS</entry>
+              <entry>Success.  The command complete successfully.  This is the expected result for all start, stop, promote and demote commands.</entry>
+              <entry>soft</entry>
             </row>
             <row>
-              <entry>
-		<para>1</para>
-              </entry>
-              <entry>
-		<para>OCF_ERR_GENERIC</para>
-              </entry>
-              <entry>
-		<para>Generic "there was a problem" error code.</para>
-              </entry>
-              <entry>
-		<para>soft</para>
-              </entry>
+              <entry>1</entry>
+              <entry>OCF_ERR_GENERIC</entry>
+              <entry>Generic "there was a problem" error code.</entry>
+              <entry>soft</entry>
             </row>
             <row>
-              <entry>
-		<para>2</para>
-              </entry>
-              <entry>
-		<para>OCF_ERR_ARGS</para>
-              </entry>
-              <entry>
-		<para>The resource's configuration is not valid on this machine.  Eg. Refers to a location/tool not found on the node. </para>
-              </entry>
-              <entry>
-		<para>hard</para>
-              </entry>
+              <entry>2</entry>
+              <entry>OCF_ERR_ARGS</entry>
+              <entry>The resource's configuration is not valid on this machine.  Eg. Refers to a location/tool not found on the node. </entry>
+              <entry>hard</entry>
             </row>
             <row>
-              <entry>
-		<para>3</para>
-              </entry>
-              <entry>
-		<para>OCF_ERR_UNIMPLEMENTED</para>
-              </entry>
-              <entry>
-		<para>The requested action is not implemented.</para>
-              </entry>
-              <entry>
-		<para>hard</para>
-              </entry>
+              <entry>3</entry>
+              <entry>OCF_ERR_UNIMPLEMENTED</entry>
+              <entry>The requested action is not implemented.</entry>
+              <entry>hard</entry>
             </row>
             <row>
-              <entry>
-		<para>4</para>
-              </entry>
-              <entry>
-		<para>OCF_ERR_PERM</para>
-              </entry>
-              <entry>
-		<para>The resource agent does not have sufficient privileges to complete the task.</para>
-              </entry>
-              <entry>
-		<para>hard</para>
-              </entry>
+              <entry>4</entry>
+              <entry>OCF_ERR_PERM</entry>
+              <entry>The resource agent does not have sufficient privileges to complete the task.</entry>
+              <entry>hard</entry>
             </row>
             <row>
-              <entry>
-		<para>5</para>
-              </entry>
-              <entry>
-		<para>OCF_ERR_INSTALLED</para>
-              </entry>
-              <entry>
-		<para>The tools required by the resource are not installed on this machine.</para>
-              </entry>
-              <entry>
-		<para>hard</para>
-              </entry>
+              <entry>5</entry>
+              <entry>OCF_ERR_INSTALLED</entry>
+              <entry>The tools required by the resource are not installed on this machine.</entry>
+              <entry>hard</entry>
             </row>
             <row>
-              <entry>
-		<para>6</para>
-              </entry>
-              <entry>
-		<para>OCF_ERR_CONFIGURED</para>
-              </entry>
-              <entry>
-		<para>The resource's configuration is invalid.  Eg. A required parameters are missing.</para>
-              </entry>
-              <entry>
-		<para>fatal</para>
-              </entry>
+              <entry>6</entry>
+              <entry>OCF_ERR_CONFIGURED</entry>
+              <entry>The resource's configuration is invalid.  Eg. A required parameters are missing.</entry>
+              <entry>fatal</entry>
             </row>
             <row>
-              <entry>
-		<para>7</para>
-              </entry>
-              <entry>
-		<para>OCF_NOT_RUNNING</para>
-              </entry>
-              <entry>
-		<para>The resource is safely stopped.  The cluster will not attempt to stop a resource that returns this for any action.</para>
-              </entry>
-              <entry>
-		<para>N/A</para>
-              </entry>
+              <entry>7</entry>
+              <entry>OCF_NOT_RUNNING</entry>
+              <entry>The resource is safely stopped.  The cluster will not attempt to stop a resource that returns this for any action.</entry>
+              <entry>N/A</entry>
             </row>
             <row>
-              <entry>
-		<para>8</para>
-              </entry>
-              <entry>
-		<para>OCF_RUNNING_MASTER</para>
-              </entry>
-              <entry>
-		<para>The resource is running in Master mode.</para>
-              </entry>
-              <entry>
-		<para>soft</para>
-              </entry>
+              <entry>8</entry>
+              <entry>OCF_RUNNING_MASTER</entry>
+              <entry>The resource is running in Master mode.</entry>
+              <entry>soft</entry>
             </row>
             <row>
-              <entry>
-		<para>9</para>
-              </entry>
-              <entry>
-		<para>OCF_FAILED_MASTER</para>
-              </entry>
-              <entry>
-		<para>The resource is in Master mode but has failed.  The resource will be demoted, stopped and then started (and possibly promoted) again.</para>
-              </entry>
-              <entry>
-		<para>soft</para>
-              </entry>
+              <entry>9</entry>
+              <entry>OCF_FAILED_MASTER</entry>
+              <entry>The resource is in Master mode but has failed.  The resource will be demoted, stopped and then started (and possibly promoted) again.</entry>
+              <entry>soft</entry>
             </row>
             <row>
-              <entry>
-		<para>other</para>
-              </entry>
-              <entry>
-		<para>NA</para>
-              </entry>
-              <entry>
-		<para>Custom error code.</para>
-              </entry>
-              <entry>
-		<para>soft</para>
-              </entry>
+              <entry>other</entry>
+              <entry>NA</entry>
+              <entry>Custom error code.</entry>
+              <entry>soft</entry>
         </row></tbody></tgroup>
       </table>
       <para>OCF Return Codes and How They are Handled</para>
       <para>Although counter intuitive, even actions that return 0 (aka. OCF_SUCCESS) can be considered to have failed.  This can happen when a resource that is expected to be in the Master state is found running as a Slave, or when a resource is found active on multiple machines..</para><section><title> Exceptions</title>
 	<orderedlist>
-	  <listitem>
-            <para>Non-recurring monitor actions (probes) that find a resource active (or in Master mode) will not result in recovery action unless it is also found active elsewhere</para>
-	  </listitem>
-	  <listitem>
-            <para>The recovery action taken when a resource is found active more than once is determined by the multiple-active property of the resource</para>
-	  </listitem>
-	  <listitem>
-            <para>Recurring actions that return OCF_ERR_UNIMPLEMENTED do not cause any type of recovery</para>
-	  </listitem>
+	  <listitem>Non-recurring monitor actions (probes) that find a resource active (or in Master mode) will not result in recovery action unless it is also found active elsewhere</listitem>
+	  <listitem>The recovery action taken when a resource is found active more than once is determined by the multiple-active property of the resource</listitem>
+	  <listitem>Recurring actions that return OCF_ERR_UNIMPLEMENTED do not cause any type of recovery</listitem>
 	</orderedlist>
     </section></section>
-  </chapter>
-  <chapter id="changes">
+  </appendix>
+  <appendix id="changes">
     <anchor id="WhatChangedin10"/>     
     <title>Appendix: What Changed in 1.0</title>
     <section><title>New</title>
       <itemizedlist>
-	<listitem>
-          <para>Failure timeouts.  See <link linkend="">Moving Resources Due to Failure</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>New section for resource and operation defaults. See <link linkend="">Setting Global Defaults for Resource Options</link> and  <link linkend="">Setting Global Defaults for Operations</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>Tool for making offline configuration changes.  See <link linkend="">Making Configuration Changes in a Sandbox</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>Rules, instance_attributes, meta_attributes and sets of operations can be defined once and referenced in multiple places.  See <link linkend="">Reusing Rules, Options and Sets of Operations</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>The CIB now accepts XPath-based create/modify/delete operations. See the cibadmin help text.</para>
-	</listitem>
-	<listitem>
-          <para>Multi-dimensional colocation and ordering constraints.  See <link linkend="">Ordering</link> and <link linkend="">Collocating Sets of Resources</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>The ability to connect to the CIB from non-cluster machines. See <link linkend="">Connecting to the Cluster Configuration from Remote Machines</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>Allow recurring actions to be triggered at known times. See <link linkend="">Specifying When Recurring Actions are Performed</link>
-          </para>
-	</listitem>
+	<listitem>Failure timeouts.  See <link linkend="">Moving Resources Due to Failure</link></listitem>
+	<listitem>New section for resource and operation defaults. See <link linkend="">Setting Global Defaults for Resource Options</link> and  <link linkend="">Setting Global Defaults for Operations</link></listitem>
+	<listitem>Tool for making offline configuration changes.  See <link linkend="">Making Configuration Changes in a Sandbox</link></listitem>
+	<listitem>Rules, instance_attributes, meta_attributes and sets of operations can be defined once and referenced in multiple places.  See <link linkend="">Reusing Rules, Options and Sets of Operations</link></listitem>
+	<listitem>The CIB now accepts XPath-based create/modify/delete operations. See the cibadmin help text.</listitem>
+	<listitem>Multi-dimensional colocation and ordering constraints.  See <link linkend="">Ordering</link> and <link linkend="">Collocating Sets of Resources</link></listitem>
+	<listitem>The ability to connect to the CIB from non-cluster machines. See <link linkend="">Connecting to the Cluster Configuration from Remote Machines</link></listitem>
+	<listitem>Allow recurring actions to be triggered at known times. See <link linkend="">Specifying When Recurring Actions are Performed</link></listitem>
       </itemizedlist>
-      <para/></section><section><title>Changed</title>
+    </section>
+    <section>
+      <title>Changed</title>
       <itemizedlist>
 	<listitem>
           <para>Syntax</para>
 	  <itemizedlist>
-	    <listitem>
-	      <para>All resource and cluster options now use dashes (-) instead of underscores (_)</para>
-	    </listitem>
-	    <listitem>
-	      <para>master_slave was renamed to master</para>
-	    </listitem>
-	    <listitem>
-	      <para>The attributes container tag was removed</para>
-	    </listitem>
-	    <listitem>
-	      <para>The operation field pre-req has been renamed requires </para>
-	    </listitem>
-	    <listitem>
-	      <para>All operations must have an interval, start/stop must have it set to zero</para>
-	    </listitem>
+	    <listitem>All resource and cluster options now use dashes (-) instead of underscores (_)</listitem>
+	    <listitem>master_slave was renamed to master</listitem>
+	    <listitem>The attributes container tag was removed</listitem>
+	    <listitem>The operation field pre-req has been renamed requires </listitem>
+	    <listitem>All operations must have an interval, start/stop must have it set to zero</listitem>
 	  </itemizedlist>
 	</listitem>
-	<listitem>
-          <para>The stonith-enabled option now defaults to true.</para>
-	</listitem>
-	<listitem>
-          <para>The cluster will refuse to start resources if stonith-enabled is true (or unset) and no STONITH resources have been defined</para>
-	</listitem>
-	<listitem>
-          <para>The attributes of colocation and ordering constraints were renamed for clarity.  See <link linkend="">Specifying the Order Resources Should Start/Stop In</link> and  <link linkend="">Placing Resources Relative to other Resources</link>
-          </para>
-	</listitem>
-	<listitem>
-          <para>resource-failure-stickiness has been replaced by migration-threshold.  See <link linkend="">Moving Resources Due to Failure</link> 
-          </para>
-	</listitem>
-	<listitem>
-          <para>The arguments for command-line tools has been made consistent</para>
-	</listitem>
+	<listitem>The stonith-enabled option now defaults to true.</listitem>
+	<listitem>The cluster will refuse to start resources if stonith-enabled is true (or unset) and no STONITH resources have been defined</listitem>
+	<listitem>The attributes of colocation and ordering constraints were renamed for clarity.  See <link linkend="">Specifying the Order Resources Should Start/Stop In</link> and  <link linkend="">Placing Resources Relative to other Resources</link></listitem>
+	<listitem>resource-failure-stickiness has been replaced by migration-threshold.  See <link linkend="">Moving Resources Due to Failure</link></listitem>
+	<listitem>The arguments for command-line tools has been made consistent</listitem>
 	<listitem>
           <para>Switched to RelaxNG schema validation and libxml2 parser.</para>
 	  <itemizedlist>
 	    <listitem>
 	      id fields are now XML IDs which have the following limitations
 	      <itemizedlist>
-		<listitem>
-		  id's cannot contain colons (:)
-		</listitem>
-		<listitem>
-		  id's cannot begin with a number
-		</listitem>
-		<listitem>
-		  id's must be globally unique (not just unique for that tag)
-		</listitem>
+		<listitem>id's cannot contain colons (:)</listitem>
+		<listitem>id's cannot begin with a number</listitem>
+		<listitem>id's must be globally unique (not just unique for that tag)</listitem>
 	      </itemizedlist>
 	    </listitem>
 	    <listitem>
@@ -4096,8 +3309,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</listitem>
       </itemizedlist>
     </section>
-  </chapter>
-  <chapter id="install">
+  </appendix>
+  <appendix id="install">
     <title>Appendix: Installation</title>
     <section>
       <anchor id="ChoosingaClusterStack"/>
@@ -4180,8 +3393,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>crm respawn</para>
 	<para>Configuration fragment for enabling Pacemaker under Heartbeat</para>
     </section></section>
-  </chapter>
-  <chapter id="upgrade">
+  </appendix>
+  <appendix id="upgrade">
     <anchor id="AppendixUpgradingClusterSoft"/>
     <title>Appendix: Upgrading Cluster Software</title>
     <section><title>Upgrade Methodologies</title><section><title>Version Compatibility</title>
@@ -4205,84 +3418,36 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="6">
             <thead>
               <row>
-		<entry>
-                  <para>Type</para>
-		</entry>
-		<entry>
-                  <para>Available between all software versions</para>
-		</entry>
-		<entry>
-                  <para>Service Outage During Upgrade</para>
-		</entry>
-		<entry>
-                  <para>Service Recovery During Upgrade</para>
-		</entry>
-		<entry>
-                  <para>Exercises Failover Logic/Configuration</para>
-		</entry>
-		<entry>
-                  <para>Allows change of cluster stack</para>
-		</entry>
+		<entry>Type</entry>
+		<entry>Available between all software versions</entry>
+		<entry>Service Outage During Upgrade</entry>
+		<entry>Service Recovery During Upgrade</entry>
+		<entry>Exercises Failover Logic/Configuration</entry>
+		<entry>Allows change of cluster stack</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>Shutdown</para>
-		</entry>
-		<entry>
-		  <para>yes</para>
-		</entry>
-		<entry>
-		  <para>always</para>
-		</entry>
-		<entry>
-		  <para>N/A</para>
-		</entry>
-		<entry>
-		  <para>no</para>
-		</entry>
-		<entry>
-		  <para>yes</para>
-		</entry>
+		<entry>Shutdown</entry>
+		<entry>yes</entry>
+		<entry>always</entry>
+		<entry>N/A</entry>
+		<entry>no</entry>
+		<entry>yes</entry>
               </row>
               <row>
-		<entry>
-		  <para>Rolling</para>
-		</entry>
-		<entry>
-		  <para>no</para>
-		</entry>
-		<entry>
-		  <para>always</para>
-		</entry>
-		<entry>
-		  <para>yes</para>
-		</entry>
-		<entry>
-		  <para>yes</para>
-		</entry>
-		<entry>
-		  <para>no</para>
-		</entry>
+		<entry>Rolling</entry>
+		<entry>no</entry>
+		<entry>always</entry>
+		<entry>yes</entry>
+		<entry>yes</entry>
+		<entry>no</entry>
               </row>
               <row>
-		<entry>
-		  <para>Reattach</para>
-		</entry>
-		<entry>
-		  <para>yes</para>
-		</entry>
-		<entry>
-		  <para>only due to failure</para>
-		</entry>
-		<entry>
-		  <para>no</para>
-		</entry>
-		<entry>
-		  <para>no</para>
-		</entry>
-		<entry>
-		  <para>yes</para>
-		</entry>
+		<entry>Reattach</entry>
+		<entry>yes</entry>
+		<entry>only due to failure</entry>
+		<entry>no</entry>
+		<entry>no</entry>
+		<entry>yes</entry>
           </row></tbody></tgroup>
       </table></section><section><title>Complete Cluster Shutdown</title>
 	<para>In this scenario one shuts down all cluster nodes and resources and upgrades all the nodes before restarting the cluster.</para><section><title>Procedure</title>
@@ -4333,60 +3498,32 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	    <tgroup cols="2">
               <thead>
 		<row>
-		  <entry>
-                    <para>Version being Installed</para>
-		  </entry>
-		  <entry>
-                    <para>Oldest Compatible Version</para>
-		  </entry>
+		  <entry>Version being Installed</entry>
+		  <entry>Oldest Compatible Version</entry>
 		</row>
               </thead><tbody><row>
-		  <entry>
-		    <para>Pacemaker 1.0</para>
-		  </entry>
-		  <entry>
-		    <para>Pacemaker 0.6 or Heartbeat 2.1.3</para>
-		  </entry>
+		  <entry>Pacemaker 1.0</entry>
+		  <entry>Pacemaker 0.6 or Heartbeat 2.1.3</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>Pacemaker 0.7</para>
-		  </entry>
-		  <entry>
-		    <para>Pacemaker 0.6 or Heartbeat 2.1.3</para>
-		  </entry>
+		  <entry>Pacemaker 0.7</entry>
+		  <entry>Pacemaker 0.6 or Heartbeat 2.1.3</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>Pacemaker 0.6</para>
-		  </entry>
-		  <entry>
-		    <para>Heartbeat 2.0.8</para>
-		  </entry>
+		  <entry>Pacemaker 0.6</entry>
+		  <entry>Heartbeat 2.0.8</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>Heartbeat 2.1.3 (or less)</para>
-		  </entry>
-		  <entry>
-		    <para>Heartbeat 2.0.4</para>
-		  </entry>
+		  <entry>Heartbeat 2.1.3 (or less)</entry>
+		  <entry>Heartbeat 2.0.4</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>Heartbeat 2.0.4 (or less)</para>
-		  </entry>
-		  <entry>
-		    <para>Heartbeat 2.0.0</para>
-		  </entry>
+		  <entry>Heartbeat 2.0.4 (or less)</entry>
+		  <entry>Heartbeat 2.0.0</entry>
 		</row>
 		<row>
-		  <entry>
-		    <para>Heartbeat 2.0.0</para>
-		  </entry>
-		  <entry>
-		    <para>None.  Use an alternate upgrade strategy.</para>
-		  </entry>
+		  <entry>Heartbeat 2.0.0</entry>
+		  <entry>None.  Use an alternate upgrade strategy.</entry>
             </row></tbody></tgroup>
 	  </table>
 	</section>
@@ -4394,15 +3531,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <title>Crossing Compatibility Boundaries</title>
 	  <para>Rolling upgrades that cross compatibility boundaries must be preformed in multiple steps.  For example, to perform a rolling update from Heartbeat 2.0.1 to Pacemaker 1.0.0 one must:</para>
 	  <orderedlist>
-	    <listitem>
-              <para>Perform a rolling upgrade from Heartbeat 2.0.1 to Heartbeat 2.0.4 </para>
-	    </listitem>
-	    <listitem>
-              <para>Perform a rolling upgrade from Heartbeat 2.0.4 to Heartbeat 2.1.3</para>
-	    </listitem>
-	    <listitem>
-              <para>Perform a rolling upgrade from Heartbeat 2.1.3 to Pacemaker 1.0.0</para>
-	    </listitem>
+	    <listitem>Perform a rolling upgrade from Heartbeat 2.0.1 to Heartbeat 2.0.4 </listitem>
+	    <listitem>Perform a rolling upgrade from Heartbeat 2.0.4 to Heartbeat 2.1.3</listitem>
+	    <listitem>Perform a rolling upgrade from Heartbeat 2.1.3 to Pacemaker 1.0.0</listitem>
 	  </orderedlist>
 	</section>
       </section>
@@ -4466,8 +3597,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </orderedlist>
       </section></section>
     </section>
-  </chapter>
-  <chapter id="upgrade-config"><title>Appendix: Upgrading the Configuration from 0.6</title>
+  </appendix>
+  <appendix id="upgrade-config"><title>Appendix: Upgrading the Configuration from 0.6</title>
     <section><title>Preparation</title>
       <para>Download the latest DTD from <ulink url="http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd">http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd</ulink> and ensure your configuration validates.</para></section><section><title>Perform the upgrade</title><section><title>Upgrade the software</title>
 	<para>Refer to the appendix: <link linkend="">Upgrading Cluster Software</link>
@@ -4559,8 +3690,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>The advantage of this method is that it can be performed without the cluster running and any validation errors should be more informative (despite being generated by the same library!) since they include line numbers.</para>
       </section>
     </section>
-  </chapter>
-  <chapter id="lsb">
+  </appendix>
+  <appendix id="lsb">
     <anchor id="HowCanITellifanInitScriptcopycopy"/>
     <title>Appendix: Is This init Script LSB Compatible?</title>
     <para>Assuming some_service is configured correctly and currently not active, the following sequence will help you determine if it is LSB compatible:</para>
@@ -4652,8 +3783,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
     </orderedlist>
     <para>The script can use one of the error codes (other than 3) listed in the LSB spec to indicate that it is active but failed. This tells the cluster that before moving the resource to another node, it needs to stop it on the existing one first. </para>
     <para>If the answer to any of the above questions is no, then the script is not LSB compliant. Your options are then to either fix the script or write an OCF agent based on the existing script.</para>
-  </chapter>
-  <chapter id="samples"><title>Appendix: Sample Configurations</title>
+  </appendix>
+  <appendix id="samples"><title>Appendix: Sample Configurations</title>
     <section><title>An Empty Configuration</title>
       <para>&lt;cib admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"></para>
       <para>  &lt;configuration></para>
@@ -4741,7 +3872,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>                    &lt;/operations></para>
       <para>                &lt;/primitive></para>
       <para>            &lt;/group></para>
-      <para>            &lt;clone id="STONITH""></para>
+      <para>            &lt;clone id="STONITH"></para>
       <para>                 &lt;meta_attributes id="stonith-options"></para>
       <para>                         &lt;nvpair id="stonith-option-1" name="globally-unique" value="false"/></para>
       <para>                 &lt;/meta_attributes></para>
@@ -4764,8 +3895,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>&lt;/cib></para>
       <para>groups and clones with stonith</para>
     </section>
-  </chapter>
-  <chapter id="more"><title>Appendix: Further Reading</title>
+  </appendix>
+  <appendix id="more"><title>Appendix: Further Reading</title>
     <section><title/><section><title>Project Website</title>
 	<para>
 	  <ulink url="http://www.clusterlabs.org/">http://www.clusterlabs.org</ulink>
@@ -4780,5 +3911,5 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>
 	  <ulink url="http://www.openais.org/">http://www.openais.org</ulink>
 	</para>
-	<para/></section></section></chapter>
+	<para/></section></section></appendix>
 </book>
