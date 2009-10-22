@@ -33,7 +33,7 @@
     <section>
       <title>What Is Pacemaker?</title>
       <para>Pacemaker is a cluster resource manager.  It achieves maximum availability for your cluster services (aka. resources) by detecting and recovering from node and resource-level failures by making use of the messaging and membership capabilities provided by your preferred cluster infrastructure (either OpenAIS or Heartbeat).</para>
-      <para>Pacemaker’s key features include:</para>
+      <para>Pacemaker's key features include:</para>
       <itemizedlist>
 	<listitem>Detection and recovery of node and service-level failures</listitem>
 	<listitem>Storage agnostic, no requirement for shared storage</listitem>
@@ -1937,8 +1937,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Extra top-level CIB options for remote access </para></section><section><title>
 	<anchor id="SpecifyingWhenRecurringActioncopy"/>Specifying When Recurring Actions are Performed</title>
       <para>By default, recurring actions are scheduled relative to when the resource started.  So if your resource was last started at 14:32 and you have a backup set to be performed every 24 hours, then the backup will always run at in the middle of the business day - hardly desirable.</para>
-      <para>To specify a date/time that the operation should be relative to, set the operation’s interval-origin.  The cluster uses this point to calculate the correct start-delay such that the operation will occur at origin + (interval * N).</para>
-      <para>So if the operation’s interval is 24h, it’s interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course cancelled.</para>
+      <para>To specify a date/time that the operation should be relative to, set the operation's interval-origin.  The cluster uses this point to calculate the correct start-delay such that the operation will occur at origin + (interval * N).</para>
+      <para>So if the operation's interval is 24h, it's interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course cancelled.</para>
       <para>The value specified for interval and interval-origin can be any date/time conforming to the <ulink url="http://en.wikipedia.org/wiki/ISO_8601">ISO8601 standard</ulink>.  By way of example, to specify an operation that would run on the first Monday of 2009 and every Monday after that you would add: </para>
       <para>&lt;op id="my-weekly-action" name="custom-action" interval="P7D" interval-origin="2009-W01-1"/> </para></section><section><title>Moving Resources</title><section><title>Manual Intervention</title>
 	<para>There are primarily two occasions when you would want to move a resource from it's current location:  when the whole node  is under maintenance and when a single resource needs to be moved.</para>
@@ -3468,7 +3468,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>    &lt;lrm_rsc_op id="apcstonith_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:7;22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="2" rc-code="7" op-status="0" interval="0" last-run="1239008085" last-rc-change="1239008085" exec-time="10" queue-time="0" op-digest="2e3da9274d3550dc6526fb24bfcbcba0"/></para>
 	<para>&lt;/lrm_resource></para>
 	<para>A monitor operation performed by the cluster to determine the current state of the apcstonith resource</para>
-	<para>In the above example, the job is a non-recurring monitor often referred to as a "probe" for the apcstonith resource. The cluster schedules probes for every configured resource on when a new node starts, in order to determine the resource’s current state before it takes further any further action.</para>
+	<para>In the above example, the job is a non-recurring monitor often referred to as a "probe" for the apcstonith resource. The cluster schedules probes for every configured resource on when a new node starts, in order to determine the resource's current state before it takes further any further action.</para>
 	<para>From the transition-key, we can see that this was the 22nd action of the 2nd graph produced by this instance of the crmd (2668bbeb-06d5-40f9-936d-24cb7f87006a).  The third field of the transition-key contains a 7, this indicates that the job expects to find the resource inactive.  By now looking at the rc-code property, we see that this was the case.</para>
 	<para>Evidently, the cluster started the resource elsewhere as that is the only job recorded for this node.</para></section><section><title>Complex Resource History Example</title>
 	<para/>
