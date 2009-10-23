@@ -48,18 +48,34 @@
     </section>
     <section><title>Types of Pacemaker Clusters</title>
       <para>Pacemaker makes no assumptions about your environment, this allows it to support practically any <ulink url="http://en.wikipedia.org/wiki/High-availability_cluster#Node_configurations">redundancy configuration</ulink> including Active/Active, Active/Passive, N+1, N+M, N-to-1 and N-to-N.</para>
-      <para>Two-node Active/Passive clusters using Pacemaker and DRBD are a cost-effective solution for many High Availability situations.</para>
+
       <para>
-	<inlinegraphic fileref="embedded:graphics1" width="10cm" depth="7.5cm"/>By supporting many nodes, Pacemaker can dramatically reduce hardware costs by allowing several active/passive clusters to be combined and share a common backup node</para>
-      <para>
-	<inlinegraphic fileref="embedded:graphics2" width="10cm" depth="7.5cm"/> 
+	<mediaobject>
+	<imageobject>
+	  <imagedata fileref="images/Pacemaker-active-passive.png" width="10cm" depth="7.5cm" align="center"/>
+	</imageobject>
+	<caption>Two-node Active/Passive clusters using Pacemaker and DRBD are a cost-effective solution for many High Availability situations.</caption>
+	</mediaobject>
       </para>
-      <para>When shared storage is available, every node can potentially be used for failover. Pacemaker can even run multiple copies of services to spread out the workload.</para>
       <para>
-	<inlinegraphic fileref="embedded:graphics3" width="10cm" depth="7.5cm"/>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/Pacemaker-n-plus-1.png" width="10cm" depth="7.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>By supporting many nodes, Pacemaker can dramatically reduce hardware costs by allowing several active/passive clusters to be combined and share a common backup node</caption>
+	</mediaobject>
+      </para>
+      <para>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/Pacemaker-n-to-n.png" width="10cm" depth="7.5cm" align="center"/>
+	  </imageobject>
+	  <caption>When shared storage is available, every node can potentially be used for failover. Pacemaker can even run multiple copies of services to spread out the workload.</caption>
+	</mediaobject>
       </para>
     </section>
-    <section><title>Pacemaker Architecture</title>
+    <section>
+      <title>Pacemaker Architecture</title>
       <para>At the highest level, the cluster is made up of three pieces:</para>
       <orderedlist>
 	<listitem>
@@ -73,12 +89,26 @@
 	</listitem>
       </orderedlist>
       <para>
-	<inlinegraphic fileref="embedded:graphics4" width="10cm" depth="7.5cm"/>Conceptual overview of the cluster stack</para>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/Pacemaker-10000ft.png" width="10cm" depth="7.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>Conceptual overview of the cluster stack</caption>
+	</mediaobject>
+      </para>
       <para>When combined with OpenAIS, Pacemaker also supports popular open source cluster filesystems<footnote>
           <para> Even though Pacemaker also supports Heartbeat, the filesystems need to use the stack for messaging and membership and OpenAIS seems to be what they're standardizing on.  Technically it would be possible for them to support Heartbeat as well, however there seems little interest in this.</para>
 	</footnote>. Due to recent standardization in the cluster filesystem community, they make use of a common distributed lock manager which makes use of OpenAIS for its messaging capabilities and Pacemaker for its membership (which nodes are up/down) and fencing services.</para>
       <para>
-	<inlinegraphic fileref="embedded:graphics5" width="10cm" depth="7.5cm"/>The Pacemaker stack when running on OpenAIS  </para><section><title>Internal Components</title>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/Pacemaker-Stack-ais.png" width="10cm" depth="7.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>The Pacemaker stack when running on OpenAIS</caption>
+	</mediaobject>
+      </para>
+      <section>
+	<title>Internal Components</title>
 	<para>Pacemaker itself is composed of four key components (illustrated below in the same color scheme as the previous diagram):</para>
 	<orderedlist>
 	  <listitem>CIB (aka. Cluster Information Base)</listitem>
@@ -86,7 +116,14 @@
 	  <listitem>PEngine (aka. PE or Policy Engine)</listitem>
 	  <listitem>STONITHd</listitem>
 	</orderedlist>
-	<para>Subsystems of a Pacemaker cluster running on OpenAIS   <inlinegraphic fileref="embedded:graphics6" width="10cm" depth="7.5cm"/></para>
+	<para>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Pacemaker-internals.png" width="10cm" depth="7.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>Subsystems of a Pacemaker cluster running on OpenAIS</caption>
+	  </mediaobject>
+	</para>
 	<para>The CIB uses XML to represent both the cluster's configuration and current state of all resources in the cluster.  The contents of the CIB are automatically kept in sync across the entire cluster and are used by the PEngine to compute the ideal state of the cluster and how it should be achieved.</para>
 	<para>This list of instructions is then fed to the DC (Designated Co-ordinator).  Pacemaker centralizes all cluster decision making by electing one of the CRMd instances to act as a master.  Should the elected CRMd process, or the node it is on, fail... a new one is quickly established.</para>
 	<para>The DC carries out the PEngine's instructions in the required order by passing them to either the LRMd (Local Resource Management daemon) or CRMd peers on other nodes via the cluster messaging infrastructure (which in turn passes them on to their LRMd process).</para>
@@ -313,7 +350,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <command>ptest --live-check -VVVVV --save-graph tmp.graph --save-dotfile tmp.dot</command>
       <para>The tool uses the same library as the live cluster to show what it would have done given the supplied input.  It's output, in addition to a significant amount of logging, is stored in two files tmp.graph and tmp.dot, both are representations of the same thing -- the cluster's response to your changes.  In the graph file is stored the complete transition, containing a list of all the actions, their parameters and their pre-requisites.  Because the transition graph is not terribly easy to read, the tool also generates a Graphviz dot-file representing the same information.</para>
       <para>
-	<inlinegraphic fileref="embedded:graphics7" width="16cm" depth="6cm"/>An example transition graph as represented by Graphviz</para>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/Policy-Engine-1.png" width="16cm" depth="6cm" align="center"/> 
+	  </imageobject>
+	  <caption>An example transition graph as represented by Graphviz</caption>
+	</mediaobject>
+      </para>
       <para>Interpreting the Graphviz output</para>
       <orderedlist>
 	<listitem>Arrows indicate ordering dependencies</listitem>
@@ -331,7 +374,16 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>In the above example, it appears that a new node, node2, has come online and that the cluster is checking to make sure rsc1, rsc2 and rsc3 are not already running there (Indicated by the *_monitor_0 entries).  Once it did that, and assuming the resources were not active there, it would have liked to stop rsc1 and rsc2 on node1 and move them to node2.  However, there appears to be some problem and the cluster cannot or is not permitted to perform the stop actions which implies it also cannot perform the start actions. For some reason the cluster does not want to start rsc3 anywhere.</para>
       <para>For information on the options supported by ptest, use ptest --help </para>
       <para>
-	<inlinegraphic fileref="embedded:graphics8" width="16cm" depth="10.5cm"/>Another, slightly more complex, transition graph that you're not expected to be able to read </para></section><section><title>Do I Need to Update the Configuration on all Cluster Nodes?</title>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/Policy-Engine-big.png" width="16cm" depth="10.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>Another, slightly more complex, transition graph that you're not expected to be able to read</caption>
+	</mediaobject>
+      </para>
+    </section>
+    <section>
+      <title>Do I Need to Update the Configuration on all Cluster Nodes?</title>
       <para>No.  Any changes are immediately synchronized to the other active members of the cluster.</para>
       <para>To reduce bandwidth, the cluster only broadcasts the incremental updates that result from your changes and uses MD5 sums to ensure that each copy is completely consistent.</para>
     </section>
@@ -1263,8 +1315,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<inlinegraphic fileref="embedded:graphics9" width="16cm" depth="2.5cm"/>Visual representation of the four resources' start order for the above constraints</para>
-      <para/>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/resource-set.png" width="16cm" depth="2.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>Visual representation of the four resources' start order for the above constraints</caption>
+	</mediaobject>
+      </para>
       <para>To simplify this situation, there is an alternate format for ordering constraints</para>
       <example>
 	<title>A chain of ordered resources expressed as a set</title>
@@ -1312,7 +1369,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<inlinegraphic fileref="embedded:graphics10" width="10cm" depth="5cm"/>Visual representation of the start order for two ordered sets of unordered resources  </para>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/two-sets.png" width="13cm" depth="7.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>Visual representation of the start order for two ordered sets of unordered resources</caption>
+	</mediaobject>
+      </para>
       <para>Of course either or both sets of resources can also be internally ordered (by setting sequential="true") and there is no limit to the number of sets that can be specified.</para>
       <example>
 	<title>Advanced use of set ordering - Three ordered sets, two of which are internally unordered </title>
@@ -1336,8 +1399,17 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<inlinegraphic fileref="embedded:graphics11" width="16cm" depth="7.5cm"/>Visual representation of the start order for the three sets defined above </para></section><section><title>
-	<anchor id="CollocatingSetsofResources"/>Collocating Sets of Resources</title>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/three-sets.png" width="16cm" depth="7.5cm" align="center"/> 
+	  </imageobject>
+	  <caption>Visual representation of the start order for the three sets defined above</caption>
+	</mediaobject>
+      </para>
+    </section>
+    <section>
+      <anchor id="CollocatingSetsofResources"/>
+      <title>Collocating Sets of Resources</title>
       <para>Another common situation is for an administrator to create a set of collocated resources.  Previously this possible either by defining a resource group (See <link linkend="">Groups - A Syntactic Shortcut</link>) which could not always accurately express the design; or by defining each relationship as an individual constraint, causing a constraint explosion as the number of resources and combinations grew.</para>
       <example>
 	<title>A chain of collocated resources</title>
@@ -1419,7 +1491,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<inlinegraphic fileref="embedded:graphics12" width="16cm" depth="7.5cm"/>Visual representation of a colocation chain where the members of the middle set have no inter-dependencies</para>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="images/three-sets-complex.png" width="20cm" depth="9cm" align="center"/> 
+	  </imageobject>
+	  <caption>Visual representation of a colocation chain where the members of the middle set have no inter-dependencies</caption>
+	</mediaobject>
+      </para>
     </section>
   </chapter>
   <chapter id="events"><title>Receiving Notification of Cluster Events</title>
@@ -3879,21 +3957,17 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para/>
 	<para>If the result of the transformation is invalid, you may see a number of errors from the validation library.  If these are not helpful, visit <ulink url="http://clusterlabs.org/mw/Validation_FAQ"/> and/or try the following procedure described below under "Manually Upgrading the Configuration". </para>
 	<orderedlist>
-	  <listitem>
-            <para>Check the changes</para>
-	  </listitem>
+	  <listitem>Check the changes</listitem>
 	</orderedlist>
-	<para>crm_shadow --diff</para>
+	<command>crm_shadow --diff</command>
 	<para>If at this point there is anything about the upgrade that you wish to fine-tune (for example, to change some of the automatic IDs) now is the time to do so.  Since the shadow configuration is not in use by the cluster, it is safe to edit the file manually:</para>
-	<para>crm_shadow --edit</para>
+	<command>crm_shadow --edit</command>
 	<para>Will open the configuration in your favorite editor (or whichever one is specified by the standard EDITOR environment variable).</para>
 	<orderedlist>
-	  <listitem>
-            <para>Preview how the cluster will react</para>
-	  </listitem>
+	  <listitem>Preview how the cluster will react</listitem>
 	</orderedlist>
 	<para>Test what the cluster will do when you upload the new configuration</para>
-	<para>ptest -VVVVV --live-check --save-dotfile upgrade06.dot</para>
+	<command>ptest -VVVVV --live-check --save-dotfile upgrade06.dot</command>
 	<para>graphviz upgrade06.dot</para>
 	<para>Verify that either no resource actions will occur or that you are happy with any that are scheduled.  If the output contains actions you do not expect (possibly due to changes to the score calculations), you may need to make further manual changes.  See <link linkend="">Testing Your Configuration Changes</link> for further details on how to interpret the output of ptest.</para>
 	<orderedlist>
@@ -3905,19 +3979,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>If this step fails, something really strange has occurred.  You should report a bug. </para></section><section><title>Manually Upgrading the Configuration</title>
 	<para>It is also possible to perform the configuration upgrade steps manually.  To do this</para>
 	<orderedlist>
-	  <listitem>
-            <para>Locate the upgrade06.xsl conversion script or download the latest version from <ulink url="http://hg.clusterlabs.org/pacemaker/stable-1.0/raw-file/tip/xml/upgrade06.xsl"/> 
-            </para>
-	  </listitem>
-	  <listitem>
-            <para>xsltproc /path/tp/upgrade06.xsl config06.xml > config10.xml</para>
-	  </listitem>
-	  <listitem>
-            <para>Locate the pacemaker.rng script.</para>
-	  </listitem>
-	  <listitem>
-            <para>xmllint --relaxng /path/tp/pacemaker.rng config10.xml</para>
-	  </listitem>
+	  <listitem>Locate the upgrade06.xsl conversion script or download the latest version from <ulink url="http://hg.clusterlabs.org/pacemaker/stable-1.0/raw-file/tip/xml/upgrade06.xsl"/></listitem>
+	  <listitem>xsltproc /path/tp/upgrade06.xsl config06.xml > config10.xml</listitem>
+	  <listitem>Locate the pacemaker.rng script.</listitem>
+	  <listitem>xmllint --relaxng /path/tp/pacemaker.rng config10.xml</listitem>
 	</orderedlist>
 	<para>The advantage of this method is that it can be performed without the cluster running and any validation errors should be more informative (despite being generated by the same library!) since they include line numbers.</para>
       </section>
