@@ -50,28 +50,37 @@
       <para>Pacemaker makes no assumptions about your environment, this allows it to support practically any <ulink url="http://en.wikipedia.org/wiki/High-availability_cluster#Node_configurations">redundancy configuration</ulink> including Active/Active, Active/Passive, N+1, N+M, N-to-1 and N-to-N.</para>
 
       <para>
-	<mediaobject>
-	<imageobject>
-	  <imagedata fileref="images/Pacemaker-active-passive.png" width="10cm" depth="7.5cm" align="center"/>
-	</imageobject>
-	<caption>Two-node Active/Passive clusters using Pacemaker and DRBD are a cost-effective solution for many High Availability situations.</caption>
-	</mediaobject>
+	<figure>
+	  <title>Active/Passive Redundancy</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Pacemaker-active-passive.png" width="10cm" depth="7.5cm" align="center"/>
+	    </imageobject>
+	    <caption>Two-node Active/Passive clusters using Pacemaker and DRBD are a cost-effective solution for many High Availability situations.</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/Pacemaker-n-plus-1.png" width="10cm" depth="7.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>By supporting many nodes, Pacemaker can dramatically reduce hardware costs by allowing several active/passive clusters to be combined and share a common backup node</caption>
-	</mediaobject>
+	<figure>
+	  <title>N plus 1 Redundancy</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Pacemaker-n-plus-1.png" width="10cm" depth="7.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>By supporting many nodes, Pacemaker can dramatically reduce hardware costs by allowing several active/passive clusters to be combined and share a common backup node</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/Pacemaker-n-to-n.png" width="10cm" depth="7.5cm" align="center"/>
-	  </imageobject>
-	  <caption>When shared storage is available, every node can potentially be used for failover. Pacemaker can even run multiple copies of services to spread out the workload.</caption>
-	</mediaobject>
+	<figure>
+	  <title>N to N Redundancy</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Pacemaker-n-to-n.png" width="10cm" depth="7.5cm" align="center"/>
+	    </imageobject>
+	    <caption>When shared storage is available, every node can potentially be used for failover. Pacemaker can even run multiple copies of services to spread out the workload.</caption>
+	  </mediaobject>
+	</figure>
       </para>
     </section>
     <section>
@@ -89,23 +98,29 @@
 	</listitem>
       </orderedlist>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/Pacemaker-10000ft.png" width="10cm" depth="7.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>Conceptual overview of the cluster stack</caption>
-	</mediaobject>
+	<figure>
+	  <title>Conceptual Stack Overview</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Pacemaker-10000ft.png" width="10cm" depth="7.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>Conceptual overview of the cluster stack</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <para>When combined with OpenAIS, Pacemaker also supports popular open source cluster filesystems<footnote>
           <para> Even though Pacemaker also supports Heartbeat, the filesystems need to use the stack for messaging and membership and OpenAIS seems to be what they're standardizing on.  Technically it would be possible for them to support Heartbeat as well, however there seems little interest in this.</para>
 	</footnote>. Due to recent standardization in the cluster filesystem community, they make use of a common distributed lock manager which makes use of OpenAIS for its messaging capabilities and Pacemaker for its membership (which nodes are up/down) and fencing services.</para>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/Pacemaker-Stack-ais.png" width="10cm" depth="7.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>The Pacemaker stack when running on OpenAIS</caption>
-	</mediaobject>
+	<figure>
+	  <title>The Pacemaker Stack</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Pacemaker-Stack-ais.png" width="10cm" depth="7.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>The Pacemaker stack when running on OpenAIS</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <section>
 	<title>Internal Components</title>
@@ -117,12 +132,15 @@
 	  <listitem>STONITHd</listitem>
 	</orderedlist>
 	<para>
-	  <mediaobject>
-	    <imageobject>
-	      <imagedata fileref="images/Pacemaker-internals.png" width="10cm" depth="7.5cm" align="center"/> 
-	    </imageobject>
-	    <caption>Subsystems of a Pacemaker cluster running on OpenAIS</caption>
-	  </mediaobject>
+	  <figure>
+	    <title>Internal Components</title>
+	    <mediaobject>
+	      <imageobject>
+		<imagedata fileref="images/Pacemaker-internals.png" width="10cm" depth="7.5cm" align="center"/> 
+	      </imageobject>
+	      <caption>Subsystems of a Pacemaker cluster running on OpenAIS</caption>
+	    </mediaobject>
+	  </figure>
 	</para>
 	<para>The CIB uses XML to represent both the cluster's configuration and current state of all resources in the cluster.  The contents of the CIB are automatically kept in sync across the entire cluster and are used by the PEngine to compute the ideal state of the cluster and how it should be achieved.</para>
 	<para>This list of instructions is then fed to the DC (Designated Co-ordinator).  Pacemaker centralizes all cluster decision making by electing one of the CRMd instances to act as a master.  Should the elected CRMd process, or the node it is on, fail... a new one is quickly established.</para>
@@ -165,7 +183,7 @@
       <para>Before one starts to configure a cluster, it is worth explaining how to view the finished product.  For this purpose we have created the <command>crm_mon</command> utility that will display the current state of an active cluster.  It can show the cluster status by node or by resource and can be used in either single-shot or dynamically-updating mode.  There are also modes for displaying a list of the operations performed (grouped by node and resource) as well as information about failures. </para>
       <para>Using this tool, you can examine the state of the cluster for irregularities and see how it responds when you cause or simulate failures.</para>
       <para>Details on all the available options can be obtained using the <command>crm_mon --help</command> command.</para>
-      <example>
+      <figure>
 	<title>Sample output from crm_mon</title>
 	<screen>
   <command># crm_mon</command>
@@ -187,8 +205,8 @@
           rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
           rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
           child_DoFencing:0        (stonith:external/vmware):        Started sles-3</screen>
-      </example>
-      <example>
+      </figure>
+      <figure>
 	<title>Sample output from crm_mon -n</title>
 	<screen>
   <command># crm_mon -n</command>
@@ -214,7 +232,7 @@
       child_DoFencing:0        (stonith:external/vmware):        Started sles-3
       child_DoFencing:1        (stonith:external/vmware):        Stopped
       child_DoFencing:2        (stonith:external/vmware):        Started sles-1</screen>
-      </example>
+      </figure>
       <para>The DC (Designated Controller) node is where all the decisions are made and if the current DC fails a new one is elected from the remaining cluster nodes.  The choice of DC is of no significance to an administrator beyond the fact that its logs will generally be more interesting.</para></section><section><title>How Should the Configuration be Updated?</title>
       <para>There are three basic rules for updating the cluster configuration:</para>
       <itemizedlist>
@@ -246,7 +264,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </figure>
       <para>to avoid modifying any other part of the configuration.</para></section><section><title>Quickly Deleting Part of the Configuration</title>
       <para>Identify the object you wish to delete.  eg.</para>
-      <example>
+      <figure>
 	<title>Searching for STONITH related configuration items</title>
 	<screen>
 	  <command># cibadmin -Q | grep stonith</command>
@@ -262,13 +280,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   <lrm_resource id="child_DoFencing:0" type="external/vmware" class="stonith">
   <lrm_resource id="child_DoFencing:3" type="external/vmware" class="stonith">
 ]]></screen>
-      </example>
+      </figure>
       <para>Next identify the resource's tag name and id (in this case primitive and child_DoFencing).  Then simply execute: </para>
-      <figure>
+      <example>
 	<title>Deleting a resource</title>
 	<programlisting><command> cibadmin --delete --crm_xml ‘&lt;primitive id="child_DoFencing"/>'</command>
 	</programlisting>
-      </figure>
+      </example>
     </section>
     <section><title>Updating the Configuration Without Using XML</title>
       <para>Some common tasks can also be performed with one of the higher level tools that avoid the need to read or edit XML.</para>
@@ -350,12 +368,15 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <command>ptest --live-check -VVVVV --save-graph tmp.graph --save-dotfile tmp.dot</command>
       <para>The tool uses the same library as the live cluster to show what it would have done given the supplied input.  It's output, in addition to a significant amount of logging, is stored in two files tmp.graph and tmp.dot, both are representations of the same thing -- the cluster's response to your changes.  In the graph file is stored the complete transition, containing a list of all the actions, their parameters and their pre-requisites.  Because the transition graph is not terribly easy to read, the tool also generates a Graphviz dot-file representing the same information.</para>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/Policy-Engine-1.png" width="16cm" depth="6cm" align="center"/> 
-	  </imageobject>
-	  <caption>An example transition graph as represented by Graphviz</caption>
-	</mediaobject>
+	<figure>
+	  <title>Small Cluster Transition</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Policy-Engine-1.png" width="16cm" depth="6cm" align="center"/> 
+	    </imageobject>
+	    <caption>An example transition graph as represented by Graphviz</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <para>Interpreting the Graphviz output</para>
       <orderedlist>
@@ -374,12 +395,15 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>In the above example, it appears that a new node, node2, has come online and that the cluster is checking to make sure rsc1, rsc2 and rsc3 are not already running there (Indicated by the *_monitor_0 entries).  Once it did that, and assuming the resources were not active there, it would have liked to stop rsc1 and rsc2 on node1 and move them to node2.  However, there appears to be some problem and the cluster cannot or is not permitted to perform the stop actions which implies it also cannot perform the start actions. For some reason the cluster does not want to start rsc3 anywhere.</para>
       <para>For information on the options supported by ptest, use ptest --help </para>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/Policy-Engine-big.png" width="16cm" depth="10.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>Another, slightly more complex, transition graph that you're not expected to be able to read</caption>
-	</mediaobject>
+	<figure>
+	  <title>Complex Cluster Transition</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/Policy-Engine-big.png" width="16cm" depth="10.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>Another, slightly more complex, transition graph that you're not expected to be able to read</caption>
+	  </mediaobject>
+	</figure>
       </para>
     </section>
     <section>
@@ -1315,12 +1339,15 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/resource-set.png" width="16cm" depth="2.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>Visual representation of the four resources' start order for the above constraints</caption>
-	</mediaobject>
+	<figure>
+	  <title>Ordered Set</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/resource-set.png" width="16cm" depth="2.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>Visual representation of the four resources' start order for the above constraints</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <para>To simplify this situation, there is an alternate format for ordering constraints</para>
       <example>
@@ -1369,12 +1396,15 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/two-sets.png" width="13cm" depth="7.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>Visual representation of the start order for two ordered sets of unordered resources</caption>
-	</mediaobject>
+	<figure>
+	  <title>Two Sets of Unordered Resources</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/two-sets.png" width="13cm" depth="7.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>Visual representation of the start order for two ordered sets of unordered resources</caption>
+	  </mediaobject>
+	</figure>
       </para>
       <para>Of course either or both sets of resources can also be internally ordered (by setting sequential="true") and there is no limit to the number of sets that can be specified.</para>
       <example>
@@ -1399,12 +1429,15 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/three-sets.png" width="16cm" depth="7.5cm" align="center"/> 
-	  </imageobject>
-	  <caption>Visual representation of the start order for the three sets defined above</caption>
-	</mediaobject>
+	<figure>
+	  <title>Three Resources Sets</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/three-sets.png" width="16cm" depth="7.5cm" align="center"/> 
+	    </imageobject>
+	    <caption>Visual representation of the start order for the three sets defined above</caption>
+	  </mediaobject>
+	</figure>
       </para>
     </section>
     <section>
@@ -1491,12 +1524,15 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
       <para>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="images/three-sets-complex.png" width="20cm" depth="9cm" align="center"/> 
-	  </imageobject>
-	  <caption>Visual representation of a colocation chain where the members of the middle set have no inter-dependencies</caption>
-	</mediaobject>
+	<figure>
+	  <title>Another Three Resources Sets</title>
+	  <mediaobject>
+	    <imageobject>
+	      <imagedata fileref="images/three-sets-complex.png" width="20cm" depth="9cm" align="center"/> 
+	    </imageobject>
+	    <caption>Visual representation of a colocation chain where the members of the middle set have no inter-dependencies</caption>
+	  </mediaobject>
+	</figure>
       </para>
     </section>
   </chapter>
