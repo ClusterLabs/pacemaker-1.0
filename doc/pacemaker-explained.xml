@@ -18,8 +18,8 @@
       </revision>
     </revhistory>
   </bookinfo>
-  <chapter id="about"><title>Read-Me-First</title>
-    <section>
+  <chapter id="ch-intro"><title>Read-Me-First</title>
+    <section id="s-intro-scope">
       <title>The Scope of this Document </title>
       <para>The purpose of this document is to definitively explain the concepts used to configure Pacemaker.   To achieve this best, it will focus exclusively on the XML syntax used to configure the CIB.  </para>
       <para>
@@ -30,7 +30,7 @@
       </para>
       <para>Additionally, this document is NOT a step-by-step how-to guide for configuring a specific clustering scenario.  Although such guides exist, the purpose of this document is to provide an understanding of the building blocks that can be used to construct any type of Pacemaker cluster. </para>
     </section>
-    <section>
+    <section id="s-intro-pacemaker">
       <title>What Is Pacemaker?</title>
       <para>Pacemaker is a cluster resource manager.  It achieves maximum availability for your cluster services (aka. resources) by detecting and recovering from node and resource-level failures by making use of the messaging and membership capabilities provided by your preferred cluster infrastructure (either OpenAIS or Heartbeat).</para>
       <para>Pacemaker's key features include:</para>
@@ -46,7 +46,8 @@
 	<listitem>Unified, scriptable, cluster shell</listitem>
       </itemizedlist>
     </section>
-    <section><title>Types of Pacemaker Clusters</title>
+    <section id="s-intro-redundancy">
+      <title>Types of Pacemaker Clusters</title>
       <para>Pacemaker makes no assumptions about your environment, this allows it to support practically any <ulink url="http://en.wikipedia.org/wiki/High-availability_cluster#Node_configurations">redundancy configuration</ulink> including Active/Active, Active/Passive, N+1, N+M, N-to-1 and N-to-N.</para>
 
       <para>
@@ -83,7 +84,7 @@
 	</figure>
       </para>
     </section>
-    <section>
+    <section id="s-intro-architecture">
       <title>Pacemaker Architecture</title>
       <para>At the highest level, the cluster is made up of three pieces:</para>
       <orderedlist>
@@ -122,7 +123,7 @@
 	  </mediaobject>
 	</figure>
       </para>
-      <section>
+      <section id="s-pcmk-internals">
 	<title>Internal Components</title>
 	<para>Pacemaker itself is composed of four key components (illustrated below in the same color scheme as the previous diagram):</para>
 	<orderedlist>
@@ -150,8 +151,8 @@
       </section>
     </section>
   </chapter>
-  <chapter id="basics"><title>Configuration Basics</title>
-    <section id="basics-layout">
+  <chapter id="ch-basics"><title>Configuration Basics</title>
+    <section id="s-config-layout">
       <title>Configuration Layout</title>
       <para>The cluster is written using XML notation and divided into two main sections; configuration and status.</para>
       <para>The status section contains the history of each resource on each node and based on this data, the cluster can construct the complete current state of the cluster.   The authoritative source for the status section is the local resource manager (lrmd) process on each cluster node and the cluster will occasionally repopulate the entire section.  For this reason it is never written to disk and admin's are advised against modifying it in any way.</para>
@@ -178,7 +179,7 @@
 	</programlisting>
       </example>
     </section>
-    <section>
+    <section id="s-cluster-status">
       <title>The Current State of the Cluster</title>
       <para>Before one starts to configure a cluster, it is worth explaining how to view the finished product.  For this purpose we have created the <command>crm_mon</command> utility that will display the current state of an active cluster.  It can show the cluster status by node or by resource and can be used in either single-shot or dynamically-updating mode.  There are also modes for displaying a list of the operations performed (grouped by node and resource) as well as information about failures. </para>
       <para>Using this tool, you can examine the state of the cluster for irregularities and see how it responds when you cause or simulate failures.</para>
@@ -233,7 +234,10 @@
       child_DoFencing:1        (stonith:external/vmware):        Stopped
       child_DoFencing:2        (stonith:external/vmware):        Started sles-1</screen>
       </figure>
-      <para>The DC (Designated Controller) node is where all the decisions are made and if the current DC fails a new one is elected from the remaining cluster nodes.  The choice of DC is of no significance to an administrator beyond the fact that its logs will generally be more interesting.</para></section><section><title>How Should the Configuration be Updated?</title>
+      <para>The DC (Designated Controller) node is where all the decisions are made and if the current DC fails a new one is elected from the remaining cluster nodes.  The choice of DC is of no significance to an administrator beyond the fact that its logs will generally be more interesting.</para>
+    </section>
+    <section id="s-config-updates">
+      <title>How Should the Configuration be Updated?</title>
       <para>There are three basic rules for updating the cluster configuration:</para>
       <itemizedlist>
 	<listitem>Rule 1 - Never edit the cib.xml file manually.  Ever.  I'm not making this up.</listitem>
@@ -262,7 +266,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   <command>cibadmin --replace --obj_type resources --xml-file tmp.xml</command>
 </programlisting>
       </figure>
-      <para>to avoid modifying any other part of the configuration.</para></section><section><title>Quickly Deleting Part of the Configuration</title>
+      <para>to avoid modifying any other part of the configuration.</para>
+    </section>
+    <section id="s-config-delete">
+      <title>Quickly Deleting Part of the Configuration</title>
       <para>Identify the object you wish to delete.  eg.</para>
       <figure>
 	<title>Searching for STONITH related configuration items</title>
@@ -288,7 +295,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</programlisting>
       </example>
     </section>
-    <section><title>Updating the Configuration Without Using XML</title>
+    <section id="s-config-tools">
+      <title>Updating the Configuration Without Using XML</title>
       <para>Some common tasks can also be performed with one of the higher level tools that avoid the need to read or edit XML.</para>
       <para>To enable stonith for example, one could run:</para>
       <screen>  <command>crm_attribute --attr-name stonith-enabled --attr-value true</command></screen>
@@ -297,8 +305,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Or to find the current location of my-test-rsc one can use:</para>
       <screen>  <command>crm_resource --locate --resource my-test-rsc</command></screen>
     </section>
-    <section>
-      <anchor id="MakingConfigurationChangesin"/>
+    <section id="s-config-sandboxes">
       <title>Making Configuration Changes in a Sandbox</title>
       <para>Often it is desirable to preview the effects of a series of changes before updating the configuration atomically.  For this purpose we have created crm_shadow which creates a "shadow" copy of the configuration and arranges for all the command line tools to use it.</para>
       <para>To begin, simply invoke crm_shadow and give it the name of a configuration to create<footnote>
@@ -361,8 +368,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Discarding changes and verifying the real configuration is intact</para>
       <para>For a full list of crm_shadow options and command, invoke the command without any arguments.</para>
     </section>
-    <section>
-      <anchor id="TestingYourConfigurationChang"/>
+    <section id="s-config-testing-changes">
       <title>Testing Your Configuration Changes</title>
       <para>We saw previously how to make a series of changes to a "shadow" copy of the configuration.  Before loading the changes back into the cluster (eg. crm_shadow --commit mytest --force), it is often advisable to simulate the effect of the changes with ptest.  Eg.</para>
       <command>ptest --live-check -VVVVV --save-graph tmp.graph --save-dotfile tmp.dot</command>
@@ -406,17 +412,19 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</figure>
       </para>
     </section>
-    <section>
+    <section id="s-config-synchronization">
       <title>Do I Need to Update the Configuration on all Cluster Nodes?</title>
       <para>No.  Any changes are immediately synchronized to the other active members of the cluster.</para>
       <para>To reduce bandwidth, the cluster only broadcasts the incremental updates that result from your changes and uses MD5 sums to ensure that each copy is completely consistent.</para>
     </section>
   </chapter>
-  <chapter id="options">
+  <chapter id="ch-cluster-options">
     <title>Cluster Options</title>
-    <section>
+    <section id="s-options-special">
       <title>Special Options</title>
-      <para>The reason for these fields to be placed at the top level instead of with the rest of cluster options is simply a matter of parsing.  These options are used by the configuration database which is, by design, mostly ignorant of the content it holds.  So the decision was made to place them in an easy to find location. </para><section><title>Determining Which Configuration to Use</title>
+      <para>The reason for these fields to be placed at the top level instead of with the rest of cluster options is simply a matter of parsing.  These options are used by the configuration database which is, by design, mostly ignorant of the content it holds.  So the decision was made to place them in an easy to find location. </para>
+      <section id="s-options-version">
+	<title>Determining Which Configuration to Use</title>
 	<para>When a node joins the cluster, the cluster will perform a check to see who has the best configuration based on the fields below.  It then asks the node with the highest (admin_epoch, epoch, num_updates) tuple to replace the configuration on all the nodes - which makes setting them and setting them correctly very important.</para>
 	<table frame="all">
 	  <title>Configuration Version Properties</title>
@@ -447,7 +455,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </tgroup>
       </table>
     </section>
-    <section>
+    <section id="s-options-validation">
       <title>Other Fields</title>
 	<table frame="all">
 	  <title>Properties Controling Validation</title>
@@ -467,7 +475,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </tgroup>
       </table>
       </section>
-      <section>
+      <section id="s-options-read-only">
 	<title>Fields Maintained by the Cluster</title>
 	<table frame="all">
 	  <title>Properties Maintained by the Cluster</title>
@@ -510,12 +518,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</example>
       </section>
     </section>
-    <section>
+    <section id="s-cluster-options">
       <title>Cluster Options</title>
       <para>Cluster options, as you'd expect, control how the cluster behaves when confronted with certain situations.</para>
       <para>They are grouped into sets and, in advanced configurations, there may be more than one.<footnote>
-          <para> This will be described later in the section on <link linkend="">rules</link> where we will show how to have the cluster use different sets of options during working hours (when downtime is usually to be avoided at all costs) than it does during the weekends (when resources can be moved to the their preferred hosts without bothering end users)</para>
-	</footnote> For now we will describe the simple case where each option is present at most once.</para><section><title>Available Cluster Options</title>
+          <para> This will be described later in the section on <xref linkend="ch-rules"/> where we will show how to have the cluster use different sets of options during working hours (when downtime is usually to be avoided at all costs) than it does during the weekends (when resources can be moved to the their preferred hosts without bothering end users)</para>
+	</footnote> For now we will describe the simple case where each option is present at most once.</para>
+      <section>
+	<title>Available Cluster Options</title>
 	<table frame="all">
 	  <title>Cluster Options</title>
 	  <tgroup cols="3">
@@ -627,22 +637,24 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
  Value: 100         (set=custom, id=custom-batch-limit)
  Please choose from one of the matches above and supply the 'id' with --attr-id</screen>
 	</example>
-	<para>In such cases follow the on-screen instructions to perform the requested action.  To determine which value is currently being used by the cluster, please refer to the the section on <link linkend="">rules</link>.</para>
+	<para>In such cases follow the on-screen instructions to perform the requested action.  To determine which value is currently being used by the cluster, please refer to the the section on <xref linkend="ch-rules"/>.</para>
       </section>
     </section>
   </chapter>
-  <chapter id="nodes">
+  <chapter id="ch-nodes">
     <title>Cluster Nodes</title>
-    <section>
+    <section id="s-node-definition">
       <title>Defining a Cluster Node</title>
       <para>Each node in the cluster will have an entry in the nodes section containing its UUID, uname and type.</para>
       <example>
 	<title>Example cluster node entry</title>
 	<screen> &lt;node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal"/></screen>
       </example>
-      <para>In normal circumstances, the admin should let the cluster populate this information automatically from the communications and membership data.  However one can use the crm_uuid tool to read an existing UUID or define a value before the cluster starts.</para></section><section><title>
-	<anchor id="DescribingaClusterNode"/>Describing a Cluster Node</title>
-      <para>Beyond the basic definition of a node, the administrator can also describe the node's attributes, such as how much RAM, disk, what OS or kernel version it has, perhaps even its physical location.  This information can then be used by the cluster when deciding where to place resources.  For more information on the use of node attributes, see the section on <link linkend="">Rules</link>.  </para>
+      <para>In normal circumstances, the admin should let the cluster populate this information automatically from the communications and membership data.  However one can use the crm_uuid tool to read an existing UUID or define a value before the cluster starts.</para>
+    </section>
+    <section id="s-node-attributes">
+      <title>Describing a Cluster Node</title>
+      <para>Beyond the basic definition of a node, the administrator can also describe the node's attributes, such as how much RAM, disk, what OS or kernel version it has, perhaps even its physical location.  This information can then be used by the cluster when deciding where to place resources.  For more information on the use of node attributes, see the section on <xref linkend="ch-rules"/>.  </para>
       <para>Node attributes can be specified ahead of time or populated later, when the cluster is running, using the crm_attribute command.</para>
       <para>Below is what the node's definition would look like if the admin ran the command:</para>
       <figure>
@@ -659,17 +671,40 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>A simpler way to determine the current value of an attribute is to use crm_attribute command again:</para>
       <para>crm_attribute --type nodes --node-uname sles-1 --attr-name kernel --get-value</para>
       <para/>
-      <para>By specifying --type nodes the admin tells the cluster that this attribute is persistent.  There are also transient attributes which are kept in the status section which are "forgotten" whenever the node rejoins the cluster.  The cluster uses this area to store a record of how many times a resource has failed on that node but administrators can also read and write to this section by specifying --type status.</para></section><section><title>Adding a New Cluster Node</title><section><title>OpenAIS</title>
+      <para>By specifying --type nodes the admin tells the cluster that this attribute is persistent.  There are also transient attributes which are kept in the status section which are "forgotten" whenever the node rejoins the cluster.  The cluster uses this area to store a record of how many times a resource has failed on that node but administrators can also read and write to this section by specifying --type status.</para>
+    </section>
+    <section id="s-node-add">
+      <title>Adding a New Cluster Node</title>
+      <section id="s-add-ais">
+	<title>OpenAIS</title>
 	<para>Adding a new is as simple as installing OpenAIS and Pacemaker, and copying /etc/ais/openais.conf and /etc/ais/authkey (if it exists) from an existing node.  You may need to modify the mcastaddr option to match the new node's IP address.</para>
-	<para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para></section><section><title>Heartbeat</title>
+	<para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para>
+      </section>
+      <section id="s-add-heartbeat">
+	<title>Heartbeat</title>
 	<para>Provided you specified autojoin any in ha.cf, adding a new is as simple as installing heartbeat and copying ha.cf and authkeys from an existing node.</para>
-	<para>If not, then after setting up ha.cf and authkeys, you must use the hb_addnode command before starting the new node. </para></section></section><section><title>Removing a Cluster Node</title><section><title>OpenAIS</title>
-	<para>TBA</para></section><section><title>Heartbeat</title>
+	<para>If not, then after setting up ha.cf and authkeys, you must use the hb_addnode command before starting the new node. </para>
+      </section>
+    </section>
+    <section id="s-node-delete">
+      <title>Removing a Cluster Node</title>
+      <section id="s-del-ais">
+	<title>OpenAIS</title>
+	<para>TBA</para>
+      </section>
+      <section id="s-del-heartbeat">
+	<title>Heartbeat</title>
 	<para>Because the messaging and membership layers are the authoritative source for cluster nodes, deleting them from the CIB is not a reliable solution.  First one must arrange for heartbeat to forget about the node (sles-1 in the example below).  To do this, shut down heartbeat on the node and then, from one of the remaining active cluster nodes, run:</para>
 	<para>hb_delnode sles-1</para>
 	<para>Only then is it safe to delete the node from the CIB with:</para>
 	<para>cibadmin --delete --obj_type nodes --crm_xml ‘&lt;node uname="sles-1"/>'</para>
-	<para>cibadmin --delete --obj_type status --crm_xml ‘&lt;node_status uname="sles-1"/>'</para></section></section><section><title>Replacing a Cluster Node</title><section><title>OpenAIS</title>
+	<para>cibadmin --delete --obj_type status --crm_xml ‘&lt;node_status uname="sles-1"/>'</para>
+      </section>
+    </section>
+    <section id="s-node-replace">
+      <title>Replacing a Cluster Node</title>
+      <section id="s-replace-ais">
+	<title>OpenAIS</title>
 	<para>The five-step guide to replacing an existing cluster node:</para>
 	<orderedlist>
 	  <listitem>
@@ -691,7 +726,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             <para>Start the new cluster node</para>
 	  </listitem>
 	</orderedlist>
-	<para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para></section><section><title>Heartbeat</title>
+	<para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para>
+      </section>
+      <section id="s-replace-heartbeat">
+	<title>Heartbeat</title>
 	<para>The seven-step guide to replacing an existing cluster node:</para>
 	<orderedlist>
 	  <listitem>
@@ -719,14 +757,19 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
     </section>
   </chapter>
-  <chapter id="resources">
-    <anchor id="ClusterResources"/>
+  <chapter id="ch-resources">
     <title>Cluster Resources</title>
-    <section><title>What is a Cluster Resource</title>
+    <section id="s-resource-intro">
+      <title>What is a Cluster Resource</title>
       <para>The role of a resource agent is to abstract the service it provides and present a consistent view to the cluster, which allows the cluster to be agnostic about the resources it manages.  The cluster doesn't need to understand how the resource works because it relies on the resource agent to do the right thing when given a start, stop or monitor command.</para>
       <para>For this reason it is crucial that resource agents are well tested. </para>
-      <para>Typically resource agents come in the form of shell scripts, however they can be written using any technology (such as C, Python or Perl) that the author is comfortable with.</para></section><section><title>Supported Resource Classes</title>
-      <para>There are three basic classes of agents supported by Pacemaker. In order of encouraged usage they are:</para><section><title>Open Cluster Framework</title>
+      <para>Typically resource agents come in the form of shell scripts, however they can be written using any technology (such as C, Python or Perl) that the author is comfortable with.</para>
+    </section>
+    <section id="s-resource-supported">
+      <title>Supported Resource Classes</title>
+      <para>There are three basic classes of agents supported by Pacemaker. In order of encouraged usage they are:</para>
+      <section id="s-resource-ocf">
+	<title>Open Cluster Framework</title>
 	<para>The OCF Spec (as it relates to resource agents can be found at: <ulink url="http://www.opencf.org/cgi-bin/viewcvs.cgi/specs/ra/resource-agent-api.txt?rev=HEAD"/> 
 	  <footnote>Note: The Pacemaker implementation has been somewhat extended from the OCF Specs, but none of those changes are incompatible with the original OCF specification</footnote> and is basically an extension of the Linux Standard Base conventions for init scripts to</para>
 	<orderedlist>
@@ -745,11 +788,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             <para> Included with the cluster is the ocf-tester script which can be useful in this regard.</para>
 	  </footnote>. The cluster follows these specifications exactly, and exiting with the wrong exit code will cause the cluster to behave in ways you will likely find puzzling and annoying. In particular, the cluster needs to distinguish a completely stopped resource from one which is in some erroneous and indeterminate state.</para>
 	<para>Parameters are passed to the script as environment variables, with the special prefix OCF_RESKEY_. So, if you need to be given a parameter which the user thinks of as ip it will be passed to the script as OCF_RESKEY_ip.  The number and purpose of the parameters is completely arbitrary, however your script should advertise any that it supports using the meta-data command.</para>
-	<para>For more information, see <ulink url="http://wiki.linux-ha.org/OCFResourceAgent"/> and <link linkend="">What Do I need to Know When Writing an OCF Resource Agent</link> in the FAQ section.</para></section><section><title>Linux Standard Base</title>
+	<para>For more information, see <ulink url="http://wiki.linux-ha.org/OCFResourceAgent"/> and <xref linkend="ap-ocf"/> in the FAQ section.</para>
+      </section>
+      <section id="s-resource-lsb">
+	<title>Linux Standard Base</title>
 	<para>LSB resource agents are those found in /etc/init.d. Generally they are provided by the OS/distribution and in order to be used with the cluster, must conform to the LSB Spec.</para>
 	<para>The LSB Spec (as it relates to init scripts) can be found at: <ulink url="http://refspecs.linux-foundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html"/>
 	</para>
-	<para>Many distributions claim LSB compliance but ship with broken init scripts. To see if your init script is LSB-compatible, see the FAQ entry <link linkend="">How Can I Tell if an Init Script is LSB Compatible</link>.  The most common problems are:</para>
+	<para>Many distributions claim LSB compliance but ship with broken init scripts. To see if your init script is LSB-compatible, see the FAQ entry <xref linkend="ap-lsb"/>.  The most common problems are:</para>
 	<orderedlist>
 	  <listitem>
             <para>Not implementing the status operation at all</para>
@@ -764,16 +810,18 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             <para>Stopping a stopped resource returns an error (this violates the LSB spec)</para>
 	  </listitem>
 	</orderedlist>
-	<para/></section><section><title>Legacy Heartbeat</title>
+      </section>
+      <section id="s-resource-heartbeat">
+	<title>Legacy Heartbeat</title>
 	<para>Version 1 of Heartbeat came with its own style of resource agents and it is highly likely that many people have written their own agents based on its conventions.  To enable administrators to continue to use these agents, they are supported by the new cluster manager.</para>
 	<para>For more information, see: <ulink url="http://wiki.linux-ha.org/HeartbeatResourceAgent"/>
 	</para>
 	<para/>
 	<para>The OCF class is the most preferred one as it is an industry standard, highly flexible (allowing parameters to be passed to agents in a non-positional manner) and self-describing.</para>
-	<para>There is also an additional class, STONITH, which is used exclusively for fencing related resources.  This is discussed later in the section on <link linkend="">fencing</link>.</para>
+	<para>There is also an additional class, STONITH, which is used exclusively for fencing related resources.  This is discussed later in the section on <xref linkend="ch-stonith"/>.</para>
       </section>
     </section>
-    <section>
+    <section id="s-resource-properties">
       <title>Properties</title>
       <para>These values tell the cluster which script to use for the resource, where to find that script and what standards it conforms to.</para>
       <table frame="all">
@@ -838,9 +886,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </example>
       <note>Heartbeat resources take only ordered and unnamed parameters.  The supplied name therefor indicates the order in which they are passed to the script.  Only single digit values are allowed.</note>
     </section>
-    <section>
-      <anchor id="Options"/>
-      <title>Options</title>
+    <section id="s-resource-options">
+      <title>Resource Options</title>
       <para>Options are used by the cluster to decide how your resource should behave and can be easily set using the --meta option of the crm_resource command.</para>
       <table frame="all">
 	<title>Options for a Primitive Resource</title>
@@ -862,15 +909,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               <entry>
 		<para>What state should the cluster attempt to keep this resource in?  Allowed values: </para>
 		<orderedlist>
-                  <listitem>
-                    <para>Stopped - Force the resource to </para>
-                  </listitem>
-                  <listitem>
-                    <para>Started - Allow the resource to be started (In the case of <link linkend="">multi-state</link> resources, they will not promoted to master)</para>
-                  </listitem>
-                  <listitem>
-                    <para>Master - Allow the resource to be started and, if appropriate, promoted</para>
-                  </listitem>
+                  <listitem>Stopped - Force the resource to </listitem>
+                  <listitem>Started - Allow the resource to be started (In the case of <link linkend="s-resource-multistate">multi-state</link> resources, they will not promoted to master)</listitem>
+                  <listitem>Master - Allow the resource to be started and, if appropriate, promoted</listitem>
 		</orderedlist>
               </entry>
             </row>
@@ -934,14 +975,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</screen>
       </example>
     </section>
-    <section>
-      <anchor id="SettingGlobalDefaultsforReso"/>
+    <section id="s-resource-defaults">
       <title>Setting Global Defaults for Resource Options</title>
       <para>To set a default value for a resource option, simply add it to the rsc_defaults section with crm_attribute. Thus, </para>
       <command>crm_attribute --type rsc_defaults --attr-name is-managed --attr-value false</command>
       <para>would prevent the cluster from starting or stopping any of the resources in the configuration (unless of course the individual resources were specifically enabled and had is-managed set to true).</para>
     </section>
-    <section>
+    <section id="s-resource-attributes">
       <title>Instance Attributes</title>
       <para>The scripts of some resource classes (LSB not being one of them) can be given parameters which determine how they behave and which instance of a service they control.</para>
       <para>If your resource agent supports parameters, you can add them with the crm_resource command.  For instance</para>
@@ -960,7 +1000,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>For an OCF resource, the result would be an environment variable called OCF_RESKEY_ip with a value of 1.2.3.4</para>
       <para>The list of instance attributes supported by an OCF script can be found by calling the resource script with the meta-data command.  The output contains an XML description of all the supported attributes, their purpose and default values. </para>
       <para>export OCF_ROOT=/usr/lib/ocf; $OCF_ROOT/resource.d/heartbeat/IPaddr2 meta-data </para>
-      <para>Displaying the metadata for the IPaddr resource agent </para></section><section><title>Resource Operations</title><section><title>Monitoring Resources for Failure </title>
+      <para>Displaying the metadata for the IPaddr resource agent </para>
+    </section>
+    <section id="s-resource-operations">
+      <title>Resource Operations</title>
+      <section>
+	<title>Monitoring Resources for Failure</title>
 	<para>By default, the cluster will not ensure your resources are still healthy.  To instruct the cluster to do this, you need to add a monitor operation to the resource's definition.</para>
 	<example>
 	  <title>An OCF resource with a recurring health check</title>
@@ -1053,13 +1098,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</table>
       </section>
     </section>
-    <section>
-      <anchor id="SettingGlobalDefaultsforOper"/>
+    <section id="s-operation-defaults">
       <title>Setting Global Defaults for Operations</title>
       <para>To set a default value for a operation option, simply add it to the op_defaults section with crm_attribute.</para>
       <para>Thus, </para>
       <para>crm_attribute --type op_defaults --attr-name timeout --attr-value 20s</para>
-      <para>would default each operation's timeout to 20 seconds.  If an operation's definition also includes a value for timeout, then that value would be used instead (for that operation only).</para><section><title>When Resources Take a Long Time to Start/Stop</title>
+      <para>would default each operation's timeout to 20 seconds.  If an operation's definition also includes a value for timeout, then that value would be used instead (for that operation only).</para>
+      <section>
+	<title>When Resources Take a Long Time to Start/Stop</title>
 	<para>There are a number of implicit operations that the cluster will always perform - start, stop and a non-recurring monitor operation (used at startup to check the resource isn't already active).  If one of these is taking too long, then you can create an entry for them and simply specify a new value.</para>
 	<example>
 	  <title>An OCF resource with custom timeouts for its implicit actions</title>
@@ -1076,7 +1122,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/primitive>
 	  </programlisting>
 	</example>
-      </section><section><title>Multiple Monitor Operations</title>
+      </section>
+      <section>
+	<title>Multiple Monitor Operations</title>
 	<para>Provided no two operations (for a single resource) have the same name and interval you can have as many monitor operations as you like.  In this way you can do a superficial health check every minute and progressively more intense ones at higher intervals.</para>
 	<para>To tell the resource agent what kind of check to perform, you need to provide each monitor with a different value for a common parameter.  The OCF standard creates a special parameter called OCF_CHECK_LEVEL for this purpose and dictates that it is <emphasis>made available to the resource agent without the normal OCF_RESKEY_ prefix</emphasis>.  </para>
 	<para>Whatever name you choose, you can specify it by adding an instance_attributes block to the op tag.  Note that it is up to each resource agent to look for the parameter and decide how to use it.</para>
@@ -1102,7 +1150,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/primitive>
 	  </programlisting>
 	</example>
-      </section><section><title>Disabling a Monitor Operation</title>
+      </section>
+      <section>
+	<title>Disabling a Monitor Operation</title>
 	<para>The easiest way to stop a recurring monitor is to just delete it.  However there can be times when you only want to disable it temporarily.  In such cases, simply add disabled="true" to the operation's definition.</para>
 	<example>
 	  <title>Example of an OCF resource with a disabled health check</title>
@@ -1124,16 +1174,23 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
     </section>
   </chapter>
-  <chapter id="constraints"><title>Resource Constraints</title>
-    <section><title>Scores</title>
+  <chapter id="ch-constraints"><title>Resource Constraints</title>
+    <section id="s-scores">
+      <title>Scores</title>
       <para>Scores of all kinds are integral to how the cluster works.  Practically everything from moving a resource to deciding which resource to stop in a degraded cluster is achieved by manipulating scores in some way. </para>
-      <para>Scores are calculated on a per-resource basis and any node with a negative score for a resource can't run that resource.  After calculating the scores for a resource, the cluster then chooses the node with the highest one.  </para><section><title>Infinity Math</title>
+      <para>Scores are calculated on a per-resource basis and any node with a negative score for a resource can't run that resource.  After calculating the scores for a resource, the cluster then chooses the node with the highest one.  </para>
+      <section id="s-scores-infinity">
+	<title>Infinity Math</title>
 	<para>INFINITY is currently defined as 1,000,000 and addition/subtraction with it follows the following 3 basic rules:</para>
 	<orderedlist>
 	  <listitem>Any value + INFINITY = INFINITY</listitem>
 	  <listitem>Any value - INFINITY = -INFINITY</listitem>
 	  <listitem>INFINITY - INFINITY  = -INFINITY</listitem>
-    </orderedlist></section></section><section><title>Deciding Which Nodes a Resource Can Run On</title>
+	</orderedlist>
+      </section>
+    </section>
+    <section id="s-resource-location">
+      <title>Deciding Which Nodes a Resource Can Run On</title>
       <para>There are two alternative strategies for specifying which nodes a resources can run on.  One way is to say that by default they can run anywhere and then create location constraints for nodes that are not allowed.  The other option is to have nodes "opt-in"... to start with nothing able to run anywhere and selectively enable allowed nodes.</para>
       <section>
 	<title>Options</title>
@@ -1181,7 +1238,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/constraints>
 	  </programlisting>
 	</example>
-      </section><section><title>Symmetrical "Opt-Out" Clusters</title>
+      </section>
+      <section>
+	<title>Symmetrical "Opt-Out" Clusters</title>
 	<para>To create an opt-out cluster, start by allowing resources to run anywhere by default</para>
 	<para>crm_attribute --attr-name symmetric-cluster --attr-value true</para>
 	<para>Then start disabling nodes.  The following fragment is the equivalent of the above opt-in configuration.</para>
@@ -1196,8 +1255,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/constraints>
 	  </programlisting>
 	</example>
-	<para>Whether you should choose opt-in or opt-out depends both on your personal preference and the make-up of your cluster.  If most of your resources can run on most of the nodes, then an opt-out arrangement is likely to result in a simpler configuration.  On the other-hand, if most resources can only run on a small subset of nodes an opt-in configuration might be simpler.</para></section><section><title>
-	  <anchor id="WhatifTwoNodesHavetheSame"/>What if Two Nodes Have the Same Score</title>
+	<para>Whether you should choose opt-in or opt-out depends both on your personal preference and the make-up of your cluster.  If most of your resources can run on most of the nodes, then an opt-out arrangement is likely to result in a simpler configuration.  On the other-hand, if most resources can only run on a small subset of nodes an opt-in configuration might be simpler.</para>
+      </section>
+      <section id="node-score-equal">
+	<title>What if Two Nodes Have the Same Score</title>
 	<para>If two nodes have the same score, then the cluster will choose one.  This choice may seem random and may not be what was intended, however the cluster was not given enough information to know what was intended.</para>
 	<example>
 	  <title>Example of two resources that prefer two nodes equally</title>
@@ -1211,44 +1272,46 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/constraints>
 	  </programlisting>
 	</example>
-	<para>In the example above, assuming no other constraints and an inactive cluster, Webserver would probably be placed on sles-1 and Database on sles-2.  It would likely have placed Webserver based on the node's uname and Database based on the desire to spread the resource load evenly across the cluster.  However other factors can also be involved in more complex configurations.</para></section><section><title>
-	  <anchor id="SpecifyingtheOrderResourcesS"/>Specifying the Order Resources Should Start/Stop In</title>
-	<para>The way to specify the order in which resources should start is by creating rsc_order constraints.</para>
-	<table frame="all">
-	  <title>Properties of an Ordering Constraint</title>
-	  <tgroup cols="2">
-            <thead>
-              <row>
-		<entry>Field</entry>
-		<entry>Description</entry>
-              </row>
-            </thead>
-	    <tbody>
-	      <row>
-		<entry>id</entry>
-		<entry>A unique name for the constraint</entry>
-              </row>
-              <row>
-		<entry>first</entry>
-		<entry>The name of a resource that must be started before the then resource is allowed to. </entry>
-              </row>
-              <row>
-		<entry>then</entry>
-		<entry>The name of a resource.  This resource will start after the first resource.</entry>
-              </row>
-              <row>
-		<entry>score</entry>
-		<entry>If greater than zero, the constraint is mandatory.  Otherwise it is only a suggestion. Default value: <emphasis>INFINITY</emphasis>
-		  </entry>
-              </row>
-              <row>
-		<entry>symmetrical</entry>
-		<entry>If true, which is the default, stop the resources in the reverse order.  Default value: <emphasis>true</emphasis></entry>
-              </row>
-	    </tbody>
-	  </tgroup>
-	</table>
+	<para>In the example above, assuming no other constraints and an inactive cluster, Webserver would probably be placed on sles-1 and Database on sles-2.  It would likely have placed Webserver based on the node's uname and Database based on the desire to spread the resource load evenly across the cluster.  However other factors can also be involved in more complex configurations.</para>
       </section>
+    </section>
+    <section id="s-resource-ordering">
+      <title>Specifying the Order Resources Should Start/Stop In</title>
+      <para>The way to specify the order in which resources should start is by creating rsc_order constraints.</para>
+      <table frame="all">
+	<title>Properties of an Ordering Constraint</title>
+	<tgroup cols="2">
+          <thead>
+            <row>
+	      <entry>Field</entry>
+	      <entry>Description</entry>
+            </row>
+          </thead>
+	  <tbody>
+	    <row>
+	      <entry>id</entry>
+	      <entry>A unique name for the constraint</entry>
+            </row>
+            <row>
+	      <entry>first</entry>
+	      <entry>The name of a resource that must be started before the then resource is allowed to. </entry>
+            </row>
+            <row>
+	      <entry>then</entry>
+	      <entry>The name of a resource.  This resource will start after the first resource.</entry>
+            </row>
+            <row>
+	      <entry>score</entry>
+	      <entry>If greater than zero, the constraint is mandatory.  Otherwise it is only a suggestion. Default value: <emphasis>INFINITY</emphasis>
+	      </entry>
+            </row>
+            <row>
+	      <entry>symmetrical</entry>
+	      <entry>If true, which is the default, stop the resources in the reverse order.  Default value: <emphasis>true</emphasis></entry>
+            </row>
+	  </tbody>
+	</tgroup>
+      </table>
       <section>
 	<title>Mandatory Ordering</title>
 	<para>When the then resource cannot run without the first resource being active, one should use mandatory constraints. To specify a constraint is mandatory, use a scores greater than zero.  This will ensure that the then resource will react when the first resource changes state.</para>
@@ -1262,7 +1325,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <listitem>
             <para>If the first resource is (re)started while the then resource is running, the then resource will be stopped and restarted</para>
 	  </listitem>
-      </orderedlist></section><section><title>Advisory Ordering</title>
+	</orderedlist>
+      </section>
+      <section>
+	<title>Advisory Ordering</title>
 	<para>On the other-hand, when score="0" is specified for a constraint, the constraint is considered optional and only has an effect when both resources are stopping and or starting.  Any change in state by the first resource will have no effect on the then resource.</para>
 	<example>
 	  <title>Example of an optional and mandatory ordering constraint</title>
@@ -1274,13 +1340,18 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </programlisting>
 	</example>
 	<para>Some additional information on ordering constraints can be found in the document <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Ordering-Explained.pdf">Ordering Explained</ulink>
-    </para></section></section><section><title>
-	<anchor id="PlacingResourcesRelativetoot"/>Placing Resources Relative to other Resources</title>
+	</para>
+      </section>
+    </section>
+    <section id="s-resource-colocation">
+      <title>Placing Resources Relative to other Resources</title>
       <para>When the location of one resource depends on the location of another one, we call this colocation.</para>
       <para>There is an important side-effect of creating a colocation constraint between two resources, that it affects the order in which resources are assigned to a node.  If you think about it, its somewhat obvious.  You can't place A relative to B unless you know where B is<footnote>
           <para> While the human brain is sophisticated enough to read the constraint in any order and choose the correct one depending on the situation, the cluster is not quite so smart.  Yet.</para>
 	</footnote>.  So when you are creating colocation constraints, it is important to consider whether you should colocate A with B or B with A.</para>
-      <para>Another thing to keep in mind is that, assuming A is collocated with B, the cluster will also take into account A's preferences when deciding which node to choose for B.  For a detailed look at exactly how this occurs, see the <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Colocation-Explained.pdf">Colocation Explained</ulink> document.</para><section><title>Options</title>
+      <para>Another thing to keep in mind is that, assuming A is collocated with B, the cluster will also take into account A's preferences when deciding which node to choose for B.  For a detailed look at exactly how this occurs, see the <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Colocation-Explained.pdf">Colocation Explained</ulink> document.</para>
+      <section>
+	<title>Options</title>
 	<table frame="all">
 	  <title>Properties of a Collocation Constraint</title>
 	  <tgroup cols="2">
@@ -1325,8 +1396,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>If mandatory placement is about "must" and "must not", then advisory placement is the "I'd prefer if" alternative.  For constraints with scores greater than -INFINITY and less than INFINITY, the cluster will try and accommodate your wishes but may ignore them if the alternative is to stop some of the cluster resources.</para>
 	<para>Like in life, where if enough people prefer something it effectively becomes mandatory, advisory colocation constraints can combine with other elements of the configuration to behave as if they were mandatory.   </para>
 	<para>&lt;rsc_colocation id="colocate-maybe" rsc="resource1" with-rsc="resource2" score="500"/> </para>
-	<para>An example advisory-only colocation constraint</para></section></section><section><title>
-	<anchor id="OrderingSetsofResources"/>Ordering Sets of Resources</title>
+	<para>An example advisory-only colocation constraint</para>
+      </section>
+    </section>
+    <section id="s-resource-sets-ordering">
+      <title>Ordering Sets of Resources</title>
       <para>A common situation is for an administrator to create a chain of ordered resources, such as:</para>
       <example>
 	<title>A chain of ordered resources</title>
@@ -1440,10 +1514,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</figure>
       </para>
     </section>
-    <section>
-      <anchor id="CollocatingSetsofResources"/>
+    <section id="s-resource-sets-collocation">
       <title>Collocating Sets of Resources</title>
-      <para>Another common situation is for an administrator to create a set of collocated resources.  Previously this possible either by defining a resource group (See <link linkend="">Groups - A Syntactic Shortcut</link>) which could not always accurately express the design; or by defining each relationship as an individual constraint, causing a constraint explosion as the number of resources and combinations grew.</para>
+      <para>Another common situation is for an administrator to create a set of collocated resources.  Previously this possible either by defining a resource group (See <xref linkend="group-resources"/>) which could not always accurately express the design; or by defining each relationship as an individual constraint, causing a constraint explosion as the number of resources and combinations grew.</para>
       <example>
 	<title>A chain of collocated resources</title>
 	<programlisting>
@@ -1536,13 +1609,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </para>
     </section>
   </chapter>
-  <chapter id="events"><title>Receiving Notification of Cluster Events</title>
-    <section><title>Configuring Email Notifications</title></section>
-    <section><title>Configuring SNMP Notifications</title></section>
+  <chapter id="ch-notification">
+    <title>Receiving Notification of Cluster Events</title>
+    <section id="s-notify-email"><title>Configuring Email Notifications</title></section>
+    <section id="s-notify-snmp"><title>Configuring SNMP Notifications</title></section>
   </chapter>
-  <chapter id="rules">
+  <chapter id="ch-rules">
     <title>Rules</title>
-    <anchor id="Rules"/>
     <para>Rules can be used to make your configuration more dynamic.  One common example is to set one value for resource-stickiness during working hours, to prevent resources from being moved back to their most preferred location, and another on weekends when no-one is around to notice an outage.  </para>
     <para>Another use of rules might be to assign machines to different processing groups (using a node attribute) based on time and to then use that attribute when creating location constraints.</para>
     <para>Each rule can contain a number of expressions, date-expressions and even other rules.  The results of the expressions are combined based on the rule's boolean-op field to determine if the rule ultimately evaluates to true or false.  What happens next depends on the context in which the rule is being used.  </para>
@@ -1575,7 +1648,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</tbody>
       </tgroup>
     </table>
-    <section>
+    <section id="s-expression-attribute">
       <title>Node Attribute Expressions</title>
       <para>Expression objects are used to control a resource based on the attributes defined by a node or nodes.  In addition to any attributes added by the administrator, each node has a built-in node attribute called #uname that can also be used.</para>
       <table frame="all">
@@ -1618,7 +1691,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</tgroup>
       </table>
     </section>
-    <section>
+    <section id="s-expression-iso8601">
       <title>Time/Date Based Expressions</title>
       <para>As the name suggests, date_expressions are used to control a resource or cluster option based on the current date/time.  They can contain an optional date_spec and/or duration object depending on the context. </para>
       <table frame="all">
@@ -1653,7 +1726,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</tgroup>
       </table>
       <para>NOTE: Because the comparisons (except for date_spec) include the time, the eq, neq, gte and lte operators have not been implemented.</para>
-      <section>
+      <section id="s-exprssion-date-spec">
 	<title>Date Specifications</title>
 	<para>date_spec objects are used to create cron-like expressions relating to time.  Each field can contain a single number or a single range.  Instead of defaulting to zero, any field not supplied is ignored.</para>
 	<para>For example, monthdays="1" matches the first day of every month and hours="09-17" matches the hours between 9am and 5pm inclusive).  However at this time one cannot specify weekdays="1,2" or weekdays="1-2,5-6" since they contain multiple ranges.  Depending on demand, this may be implemented in a future release.</para>
@@ -1714,10 +1787,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </tgroup>
 	</table>
       </section>
-      <section>
+      <section id="s-expression-duration">
 	<title>Durations</title>
 	<para>Durations are used to calculate a value for end when one is not supplied to in_range operations.  They contain the same fields as date_spec objects but without the limitations (ie. you can have a duration of 19 days).   Like date_specs, any field not supplied is ignored. </para>
-	<section><title>Sample Time Based Expressions</title>
+	<section>
+	  <title>Sample Time Based Expressions</title>
 	  <example>
 	    <title>True if now is any time in the year 2005</title>
 	    <programlisting>
@@ -1802,110 +1876,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/rule>
 	    </programlisting>
 	  </example>
-	  <title>Using Rules to Determine Resource Location</title>
-	  <para>If the constraint's outer-most rule evaluates to false, the cluster treats the constraint as if it was not there.  When the rule evaluates to true, the node's preference for running the resource is updated with the score associated with the rule.</para>
-	  <para>If this sounds familiar, its because you have been using a simplified syntax for location constraint rules already.  Consider the following location constraint:</para>
-	  <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc" score="-INFINITY" node="c001n03"/></para>
-	  <para>Prevent myApacheRsc from running on c001n03</para>
-	  <para>This constraint can be more verbosely written as:</para>
-	  <example>
-	    <title>Prevent myApacheRsc from running on c001n03 - expanded version</title>
-	    <programlisting>
-  &lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc">
-      &lt;rule id="dont-run-apache-rule" score="-INFINITY">
-            &lt;expression id="dont-run-apache-expr" attribute="#uname" operation="eq" value="c00n03"/>
-      &lt;/rule>
-   &lt;/rsc_location>
-	    </programlisting>
-	  </example>
-	  <para>The advantage of using the expanded form is that one can then add extra clauses to the rule, such as limiting the rule such that it only applies during certain times of the day or days of the week (this is discussed in subsequent sections).</para>
-	  <para>It also allows us to match on node properties other than its name.  If we rated each machine's CPU power such that the cluster had the following nodes section:</para>
-	  <example>
-	    <title>A sample nodes section for use with score-attribute </title>
-	    <programlisting>
-     &lt;nodes>
-        &lt;node id="uuid1" uname="c001n01" type="normal">
-          &lt;instance_attributes id="uuid1-custom_attrs">
-              &lt;nvpair id="uuid1-cpu_mips" name="cpu_mips" value="1234"/>
-          &lt;/instance_attributes>
-        &lt;/node>
-        &lt;node id="uuid2" uname="c001n02" type="normal">
-          &lt;instance_attributes id="uuid2-custom_attrs">
-              &lt;nvpair id="uuid2-cpu_mips" name="cpu_mips" value="5678"/>
-          &lt;/instance_attributes>
-        &lt;/node>
-      &lt;/nodes>
-	    </programlisting>
-	  </example>
-	  <para>then we could prevent resources from running on underpowered machines with the rule</para>
-      <programlisting>
-  &lt;rule id="need-more-power-rule" score="-INFINITY">
-            &lt;expression id=" need-more-power-expr" attribute="cpu_mips" operation="lt" value="3000"/>
-  &lt;/rule>
-      </programlisting>
-	  <title>Using score-attribute Instead of score</title>
-	  <para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para>
-	  <title>Using Rules to Control Resource Options</title>
-	  <para>Often some cluster nodes will be different from their peers, sometimes these differences (the location of a binary or the names of network interfaces) require resources be configured differently depending on the machine they're hosted on.</para>
-	  <para>By defining multiple instance_attributes objects for the resource and adding a rule to each, we can easily handle these special cases.</para>
-	  <para>In the example below, mySpecialRsc will use eth1 and port 9999 when run on node1, eth2 and port 8888 on node2 and default to eth0 and port 9999 for all other nodes. </para>
-	  <example>
-	    <title>Defining different resource options based on the node name</title>
-	    <programlisting>
-  &lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider="me">
-    &lt;instance_attributes id="special-node1" score="3">
-      &lt;rule id="node1-special-case" score="INFINITY" >
-        &lt;expression id="node1-special-case-expr" attribute="#uname" operation="eq" value="node1"/>
-      &lt;/rule>
-      &lt;nvpair id="node1-interface" name="interface" value="eth1"/>
-    &lt;/instance_attributes>
-    &lt;instance_attributes id="special-node2" score="2" >
-      &lt;rule id="node2-special-case" score="INFINITY">
-        &lt;expression id="node2-special-case-expr" attribute="#uname" operation="eq" value="node2"/>
-      &lt;/rule>
-      &lt;nvpair id="node2-interface" name="interface" value="eth2"/>
-      &lt;nvpair id="node2-port" name="port" value="8888"/>
-    &lt;/instance_attributes>
-    &lt;instance_attributes id="defaults" score="1" >
-      &lt;nvpair id="default-interface" name="interface" value="eth0"/>
-      &lt;nvpair id="default-port" name="port" value="9999"/>
-    &lt;/instance_attributes>
-  &lt;/primitive>
-	    </programlisting>
-	  </example>
-	  <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para>
-	  <title>Using Rules to Control Cluster Options</title>
-	  <para>Controlling cluster options is achieved in much the same manner as specifying different resource options on different nodes.</para>
-	  <para>The difference is that because they are cluster options, one cannot (or should not because they wont work) use attribute based expressions.  The following example illustrates how to set a different resource-stickiness value during and outside of work hours.  This allows resources to automatically move back to their most preferred hosts, but at a time that (in theory) does not interfere with business activities.</para>
-	  <example>
-	    <title>Set resource-stickiness=INFINITY Mon-Fri between 9am and 6pm, and resource-stickiness=0 all other times</title>
-	    <programlisting>
-  &lt;rsc_defaults>
-    &lt;meta_attributes id="core-hours" score="2">
-       &lt;rule id="core-hour-rule" score="0">
-           &lt;date_expression id="nine-to-five-Mon-to-Fri" operation="date_spec">
-              &lt;date_spec id="nine-to-five-Mon-to-Fri-spec" hours="9-17" weekdays="1-5"/>
-           &lt;/date_expression>
-       &lt;/rule>
-       &lt;nvpair id="core-stickiness" name="resource-stickiness" value="INFINITY"/>
-    &lt;/meta_attributes>
-    &lt;meta_attributes id="after-hours" score="1" >
-      &lt;nvpair id="after-stickiness" name="resource-stickiness" value="0"/>
-    &lt;/meta_attributes>
-  &lt;/rsc_defaults>
-	    </programlisting>
-	  </example>
-	  <section>
-	    <anchor id="EnsuringTimeBasedRulesTakeEffect"/>
-	    <title>Ensuring Time Based Rules Take Effect</title>
-	    <para>A Pacemaker cluster is an event driven system.  As such, it wont recalculate the best place for resources to run in unless something (like a resource failure or configuration change) happens.  This can mean that a location constraint that only allows resource X to run between 9am and 5pm is not enforced.</para>
-	    <para>If you rely on time based rules, it is essential that you set the cluster-recheck-interval option.  This tells the cluster to periodically recalculate the ideal state of the cluster.  For example, if you set cluster-recheck-interval=5m, then sometime between 9:00 and 9:05 the cluster would notice that it needs to start resource X, and between 17:00 and 17:05 it would realize it needed to be stopped.  </para>
-	    <para>Note that the timing of the actual start and stop actions depends on what else needs to be performed first.  </para>
-	  </section>
 	</section>
       </section>
     </section>
-    <section>
+    <section id="s-rules-location">
       <title>Using Rules to Determine Resource Location</title>
       <para>If the constraint's outer-most rule evaluates to false, the cluster treats the constraint as if it was not there.  When the rule evaluates to true, the node's preference for running the resource is updated with the score associated with the rule.</para>
       <para>If this sounds familiar, its because you have been using a simplified syntax for location constraint rules already.  Consider the following location constraint:</para>
@@ -1947,8 +1921,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             &lt;expression id=" need-more-power-expr" attribute="cpu_mips" operation="lt" value="3000"/>
   &lt;/rule>
       </programlisting>
-      <section><title/>
-	<section><title>Using score-attribute Instead of score</title>score-attributescore<para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para></section></section></section><section><title>Using Rules to Control Resource Options</title>
+      <section>
+	<title/>
+	<section><title>Using score-attribute Instead of score</title>score-attributescore<para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para>
+	</section>
+      </section>
+    </section>
+    <section id="s-rules-resource-options">
+      <title>Using Rules to Control Resource Options</title>
       <para>Often some cluster nodes will be different from their peers, sometimes these differences (the location of a binary or the names of network interfaces) require resources be configured differently depending on the machine they're hosted on.</para>
       <para>By defining multiple instance_attributes objects for the resource and adding a rule to each, we can easily handle these special cases.</para>
       <para>In the example below, mySpecialRsc will use eth1 and port 9999 when run on node1, eth2 and port 8888 on node2 and default to eth0 and port 9999 for all other nodes. </para>
@@ -1976,7 +1956,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/primitive>
 	</programlisting>
       </example>
-      <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para></section><section><title>Using Rules to Control Cluster Options</title>
+      <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para>
+    </section>
+    <section id="s-rules-cluster-options">
+      <title>Using Rules to Control Cluster Options</title>
       <para>Controlling cluster options is achieved in much the same manner as specifying different resource options on different nodes.</para>
       <para>The difference is that because they are cluster options, one cannot (or should not because they wont work) use attribute based expressions.  The following example illustrates how to set a different resource-stickiness value during and outside of work hours.  This allows resources to automatically move back to their most preferred hosts, but at a time that (in theory) does not interfere with business activities.</para>
       <example>
@@ -1997,16 +1980,16 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/rsc_defaults>
 	</programlisting>
       </example>
-    </section><section><title>
-	<anchor id="EnsuringTimeBasedRulesTakeE"/>Ensuring Time Based Rules Take Effect</title>
+    </section>
+    <section id="s-rules-recheck">
+      <title>Ensuring Time Based Rules Take Effect</title>
       <para>A Pacemaker cluster is an event driven system.  As such, it wont recalculate the best place for resources to run in unless something (like a resource failure or configuration change) happens.  This can mean that a location constraint that only allows resource X to run between 9am and 5pm is not enforced.</para>
       <para>If you rely on time based rules, it is essential that you set the cluster-recheck-interval option.  This tells the cluster to periodically recalculate the ideal state of the cluster.  For example, if you set cluster-recheck-interval=5m, then sometime between 9:00 and 9:05 the cluster would notice that it needs to start resource X, and between 17:00 and 17:05 it would realize it needed to be stopped.  </para>
       <para>Note that the timing of the actual start and stop actions depends on what else needs to be performed first.  </para>
     </section>
   </chapter>
-  <chapter id="advanced-config"><title>Advanced Configuration</title>
-    <section>
-      <anchor id="ConnectingtotheClusterConfig"/>
+  <chapter id="ch-advanced-options"><title>Advanced Configuration</title>
+    <section id="s-remote-connection">
       <title>Connecting to the Cluster Configuration from a Remote Machine</title>
       <para>Provided Pacemaker is installed on a machine, it is possible to connect to the cluster even if the machine itself is not a part of it.   To do this, one simply sets up a number of environment variables and runs the same commands as you would when working on a cluster node.</para>
       <table frame="all">
@@ -2063,14 +2046,18 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
         </row></tbody></tgroup>
       </table>
     </section>
-    <section>
-      <anchor id="SpecifyingWhenRecurringActioncopy"/>
+    <section id="s-recurring-start">
       <title>Specifying When Recurring Actions are Performed</title>
       <para>By default, recurring actions are scheduled relative to when the resource started.  So if your resource was last started at 14:32 and you have a backup set to be performed every 24 hours, then the backup will always run at in the middle of the business day - hardly desirable.</para>
       <para>To specify a date/time that the operation should be relative to, set the operation's interval-origin.  The cluster uses this point to calculate the correct start-delay such that the operation will occur at origin + (interval * N).</para>
       <para>So if the operation's interval is 24h, it's interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course cancelled.</para>
       <para>The value specified for interval and interval-origin can be any date/time conforming to the <ulink url="http://en.wikipedia.org/wiki/ISO_8601">ISO8601 standard</ulink>.  By way of example, to specify an operation that would run on the first Monday of 2009 and every Monday after that you would add: </para>
-      <para>&lt;op id="my-weekly-action" name="custom-action" interval="P7D" interval-origin="2009-W01-1"/> </para></section><section><title>Moving Resources</title><section><title>Manual Intervention</title>
+      <para>&lt;op id="my-weekly-action" name="custom-action" interval="P7D" interval-origin="2009-W01-1"/> </para>
+    </section>
+    <section id="s-moving-resource">
+      <title>Moving Resources</title>
+      <section>
+	<title>Manual Intervention</title>
 	<para>There are primarily two occasions when you would want to move a resource from it's current location:  when the whole node  is under maintenance and when a single resource needs to be moved.</para>
 	<para>In the case where everything needs to move, since everything eventually comes down to a score, you could create constraints for every resource you have preventing it from running on that node.  While the configuration can seem convoluted at times, not even we would require this of administrators.</para>
 	<para>Instead one can set a special node attribute which tells the cluster "don't let anything run here".  There is even a helpful tool to help query and set it called crm_standby.  To check the standby status of the current machine, simply run:</para>
@@ -2100,11 +2087,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>Which will instead create a negative constraint.  Eg.</para>
 	<para> &lt;rsc_location rsc="Email" node="sles-1" score="-INFINITY"/></para>
 	<para>This will achieve the desired effect but will also have long-term consequences.  As the tool will warn you, the creation of a     -INFINITY constraint will prevent the resource from running on that node until crm_resource -U is used.  This includes the situation where every other cluster node is no longer available.</para>
-	<para>In some cases, such as when resource stickiness is set to INFINITY, it is possible that you will end up with the problem described in <link linkend="">What if Two Nodes Have the Same Score</link>.  The tool can detect some of these cases and deals with them by also creating both a positive and negative constraint.  Eg. </para>
+	<para>In some cases, such as when resource stickiness is set to INFINITY, it is possible that you will end up with the problem described in <xref linkend="node-score-equal"/>.  The tool can detect some of these cases and deals with them by also creating both a positive and negative constraint.  Eg. </para>
 	<para>        Email prefers sles-1 with a score of -INFINITY</para>
 	<para>        Email prefers sles-2 with a score of INFINITY</para>
-	<para>which has the same long-term consequences as discussed earlier.</para></section><section><title>
-	  <anchor id="MigratingDuetoFailure"/>Moving Resources Due to Failure</title>
+	<para>which has the same long-term consequences as discussed earlier.</para></section>
+      <section id="s-failure-migration">
+	<title>Moving Resources Due to Failure</title>
 	<para>New in 1.0 is the concept of a migration threshold<footnote>
             <para> The naming of this option was unfortunate as it is easily confused with true migration, the process of moving a resource from one node to another without stopping it.  Xen virtual guests are the most common example of resources that can be migrated in this manner.</para>
 	  </footnote>.  Simply define migration-threshold=N for a resource and it will migrate to a new node after N failures. There is no threshold defined by default.  To determine the resource's current failure status and limits, use crm_mon --failcounts</para>
@@ -2112,7 +2100,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>So a setting of migration-threshold=2 and failure-timeout=60s would cause the resource to move to a new node after 2 failures and potentially allow it to move back (depending on the stickiness and constraint scores) after one minute.</para>
 	<para>There are two exceptions to the migration threshold concept and occur when a resource either fails to start or fails to stop.  Start failures cause the failcount to be set to INFINITY and thus always cause the resource to move immediately.</para>
 	<para>Stop failures are slightly different and crucial.  If a resource fails to stop and STONITH is enabled, then the cluster will fence the node in order to be able to start the resource elsewhere.  If STONITH is not enabled, then the cluster has no way to continue and will not try to start the resource elsewhere, but will try to stop it again after the failure timeout.</para>
-	<para>Note: Please read the section on <link linkend="">Ensuring Time Based Rules Take Effect</link> before enabling this option. </para></section><section><title>Moving Resources Due to Connectivity Changes</title>
+	<para>Note: Please read the section on <xref linkend="s-rules-recheck"/> before enabling this option. </para>
+      </section>
+      <section>
+	<title>Moving Resources Due to Connectivity Changes</title>
 	<para>Setting up the cluster to move resources when external connectivity is lost, is a two-step process.</para>
 	<para>
 	  <emphasis>Tell Pacemaker to monitor connectivity</emphasis>
@@ -2170,7 +2161,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>
 	  <emphasis>Tell Pacemaker how to interpret the connectivity data</emphasis>
 	</para>
-	<para>NOTE: Before reading the following, please make sure you have read and understood the <link linkend="">Rules</link> section above.</para>
+	<para>NOTE: Before reading the following, please make sure you have read and understood <xref linkend="ch-rules"/> above.</para>
 	<para>There are a number of ways to use the connectivity data provided by Heartbeat.  The most common setup is for people to have a single ping node and want to prevent the cluster from running a resource on any unconnected node.</para>
 	<example>
 	  <title>Don't run on unconnected nodes</title>
@@ -2262,8 +2253,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               <para>The resource must have the allow-migrate meta-attribute set to true (not the default).</para>
 	    </listitem>
 	  </orderedlist>
-	  <para>If the resource depends on a clone, and at the time the resource needs to be move, the clone has instances that are stopping and instances that are starting, then the resource will be moved in the traditional manner.  The Policy Engine is not yet able to model this situation correctly and so takes the safe (yet less optimal) path. </para></section></section></section><section><title>
-	<anchor id="ReusingRulesandSetsofOption"/>Reusing Rules, Options and Sets of Operations</title>
+	  <para>If the resource depends on a clone, and at the time the resource needs to be move, the clone has instances that are stopping and instances that are starting, then the resource will be moved in the traditional manner.  The Policy Engine is not yet able to model this situation correctly and so takes the safe (yet less optimal) path. </para>
+	</section>
+      </section>
+    </section>
+    <section id="s-reusing-config-elements">
+      <title>Reusing Rules, Options and Sets of Operations</title>
       <para>Sometimes a number of constraints need to use the same set of rules and resources need to set the same options an parameters.  To simplify this situation, you can refer to an existing object using an id-ref instead of an id.</para>
       <para>So if for one resource you have</para>
       <programlisting>
@@ -2310,9 +2305,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para/>
     </section>
   </chapter>
-  <chapter id="advanced-rsc"><title>Advanced Resource Types</title>
-    <section>
-      <anchor id="GroupsASyntacticShortcut"/>
+  <chapter id="ch-advanced-resources"><title>Advanced Resource Types</title>
+    <section id="group-resources">
       <title>Groups - A Syntactic Shortcut</title>
       <para>One of the most common elements of a cluster is a set of resources that need to be located together, start sequentially and stop in the reverse order.  To simplify this configuration we support the concept of groups.  </para>
       <example>
@@ -2377,9 +2371,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
       <section>
 	<title>Options</title>
-	<para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para></section><section><title>Using Groups</title><section><title>Instance Attributes</title>
+	<para>Options inherited from <link linkend="s-resource-options">simple resources</link>: priority, target-role, is-managed</para></section><section><title>Using Groups</title><section><title>Instance Attributes</title>
 	  <para>Groups have no instance attributes, however any that are set here will be inherited by the group's children. </para></section><section><title>Contents</title>
-	  <para>Groups may only contain a collection of <link linkend="">primitive</link> cluster resources.  To refer to the child of a group resource, just use the child's id instead of the group's.</para></section><section><title>Constraints</title>
+	  <para>Groups may only contain a collection of <link linkend="ch-resources">primitive</link> cluster resources.  To refer to the child of a group resource, just use the child's id instead of the group's.</para></section><section><title>Constraints</title>
 	  <para>Although it is possible to reference the group's children in constraints, it is usually preferable to use the group's name instead.</para>
 	  <example>
 	    <title>Example constraints involving groups</title>
@@ -2392,8 +2386,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	    </programlisting>
 	  </example>
 	</section><section><title>Stickiness</title>
-	  <para>Stickiness, the measure of how much a resource wants to stay where it is, is additive in groups.  Every active member of the group will contribute its stickiness value to the group's total.  So if the default resource-stickiness is 100 a group has seven members, five of which are active, then the group as a whole will prefer its current location with a score of 500.</para></section></section></section><section><title>
-	<anchor id="ClonesResourcesThatShouldb"/>Clones - Resources That Should be Active on Multiple Hosts</title>
+	  <para>Stickiness, the measure of how much a resource wants to stay where it is, is additive in groups.  Every active member of the group will contribute its stickiness value to the group's total.  So if the default resource-stickiness is 100 a group has seven members, five of which are active, then the group as a whole will prefer its current location with a score of 500.</para>
+	</section>
+      </section>
+    </section>
+    <section id="s-resource-clone">
+      <title>Clones - Resources That Should be Active on Multiple Hosts</title>
       <para>Clones were initially conceived as a convenient way to start N instances of an IP resource and have them distributed throughout the cluster for load balancing. They have turned out to quite useful for a number of purposes including integrating with Red Hat's DLM, the fencing subsystem and OCFS2.</para>
       <para>You can clone any resource provided the resource agent supports it.</para>
       <para>Three types of cloned resources exist.</para>
@@ -2411,7 +2409,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para/>
       <para>Anonymous clones are the simplest type.  These resources behave completely identically everywhere they are running.  Because of this, there can only be one copy of an anonymous clone active per machine.</para>
       <para>Globally unique clones are distinct entities. A copy of the clone running on one machine is not equivalent to another instance on another node. Nor would any two copies on the same node be equivalent.</para>
-      <para>Stateful clones are covered later in the <link linkend="">Advanced Resources - Multi-state</link> section.</para>
+      <para>Stateful clones are covered later in <xref linkend="s-resource-multistate"/>.</para>
       <example>
 	<title>An example clone</title>
 	<programlisting>
@@ -2442,7 +2440,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
       <section>
 	<title>Options</title>
-	<para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para>
+	<para>Options inherited from <link linkend="ch-resources">simple resources</link>: priority, target-role, is-managed</para>
 	<table frame="all">
 	  <title>Clone specific configuration options</title>
 	  <tgroup cols="2">
@@ -2640,8 +2638,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</section>
       </section>
     </section>
-    <section>
-      <anchor id="AdvancedResourcesMultistate"/>
+    <section id="s-resource-multistate">
       <title>Multi-state - Resources That Have Multiple Modes</title>
       <para>Multi-state resources are a specialization of Clones (please ensure you understand the section on clones before continuing) that allow the instances to be in one of two operating modes.  These modes are called Master and Slave but can mean whatever you wish them to mean.  The only limitation is that when an instance is started, it must come up in the Slave state.</para><section><title>Properties</title>
 	<table frame="all">
@@ -2662,8 +2659,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
       <section>
 	<title>Options</title>
-	<para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para>
-	<para>Options inherited from <link linkend="">clone resources</link>: clone-max, clone-node-max, notify, globally-unique, ordered, interleave</para>
+	<para>Options inherited from <link linkend="ch-resources">simple resources</link>: priority, target-role, is-managed</para>
+	<para>Options inherited from <link linkend="s-resource-clone">clone resources</link>: clone-max, clone-node-max, notify, globally-unique, ordered, interleave</para>
 	<table frame="all">
 	  <title>Multi-state specific resource configuration options</title>
 	  <tgroup cols="2">
@@ -3024,19 +3021,22 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
     </section>
   </chapter>
-  <chapter id="stonith">
+  <chapter id="ch-stonith">
     <title>Protecting Your Data - STONITH</title>
-    <anchor id="ProtectingYourDatawithSTONIT"/>
-    <section><title>Why You Need STONITH</title>
+    <section id="s-stonith-why">
+      <title>Why You Need STONITH</title>
       <para>STONITH is an acronym for Shoot-The-Other-Node-In-The-Head and it protects your data from being corrupted by rouge nodes or concurrent access.</para>
       <para>Just because a node is unresponsive, this doesn't mean it isn't accessing your data.  The only way to be 100% sure that your data is safe, is to use STONITH so we can be certain that the node is truly offline, before allowing the data to be accessed from another node.</para>
       <para>STONITH also has a role to play in the event that a clustered service cannot be stopped.  In this case, the cluster uses STONITH to force the whole node offline, thereby making it safe to start the service elsewhere.</para>
     </section>
-    <section>
+    <section id="s-stonith-choose">
       <title>What STONITH Device Should You Use</title>
       <para>It is crucial that the STONITH device can allow the cluster to differentiate between a node failure and a network one.  </para>
       <para>The biggest mistake people make in choosing a STONITH device is to use remote power switch (such as many on-board IMPI controllers) that shares power with the node it controls.  In such cases, the cluster cannot be sure if the node is really offline, or active and suffering from a network fault.</para>
-      <para>Likewise, any device that relies on the machine being active (such as SSH-based "devices" used during testing) are inappropriate.</para></section><section><title>Configuring STONITH</title>
+      <para>Likewise, any device that relies on the machine being active (such as SSH-based "devices" used during testing) are inappropriate.</para>
+    </section>
+    <section id="s-stonith-configure">
+      <title>Configuring STONITH</title>
       <orderedlist>
 	<listitem>
           <para>Find the correct driver:  stonith -L</para>
@@ -3054,7 +3054,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<listitem>Create a file called stonith.xml containing a primitive resource with a class of stonith, a type of {type} and a parameter for each of the values returned in step 2</listitem>
 	<listitem>Create a clone from the primitive resource if the device can shoot more than one node<emphasis> and supports multiple simultaneous connections</emphasis>.</listitem>
 	<listitem>Upload it into the CIB using cibadmin: cibadmin -C -o resources --xml-file stonith.xml</listitem>
-      </orderedlist><section><title>Example</title>
+      </orderedlist>
+      <section id="s-stonith-example">
+	<title>Example</title>
 	<para>Assuming we have an IBM BladeCenter consisting of four nodes and the management interface is active on 10.0.0.1, then we would chose the external/ibmrsa driver in step 2 and obtain the following list of parameters</para>
 	<para># stonith -t external/ibmrsa -n</para>
 	<para>hostname  ipaddr  userid  passwd  type</para>
@@ -3079,8 +3081,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
           &lt;/clone>
       </programlisting>
   </section></section></chapter>
-  <chapter id="status"><title>Status - Here be dragons</title>
-    <para>Most users never need understand the contents of the status section and can be content with the output from crm_mon. However for those with a curious inclination, the following attempts to proved an overview of its contents.</para><section><title>Node Status</title>
+  <chapter id="ch-status">
+    <title>Status - Here be dragons</title>
+    <para>Most users never need understand the contents of the status section and can be content with the output from crm_mon. However for those with a curious inclination, the following attempts to proved an overview of its contents.</para>
+    <section id="s-status-intro">
+      <title>Node Status</title>
       <para>In addition to the cluster's configuration, the CIB holds an up-to-date representation of each cluster node in the status section.</para>
       <figure>
 	<title>A bare-bones status entry for a healthy node called cl-virt-1</title>
@@ -3155,8 +3160,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               <entry>Diagnostic indicator. The origin of the most recent change(s).</entry>
         </row></tbody></tgroup>
       </table>
-      <para>The cluster uses these fields to determine if, at the node level, the node is healthy or is in a failed state and needs to be fenced.</para></section><section><title>Transient Node Attributes</title>
-      <para>Like regular <link linkend="">node attributes</link>, the name/value pairs listed here also help describe the node.  However they are forgotten by the cluster when the node goes offline.  This can be useful, for instance, when you only want a node to be in standby mode (not able to run resources) until the next reboot. </para>
+      <para>The cluster uses these fields to determine if, at the node level, the node is healthy or is in a failed state and needs to be fenced.</para>
+    </section>
+    <section id="s-status-transient">
+      <title>Transient Node Attributes</title>
+      <para>Like regular <link linkend="s-node-attributes">node attributes</link>, the name/value pairs listed here also help describe the node.  However they are forgotten by the cluster when the node goes offline.  This can be useful, for instance, when you only want a node to be in standby mode (not able to run resources) until the next reboot. </para>
       <para>In addition to any values the administrator sets, the cluster will also store information about failed resources here.</para>
       <figure>
 	<title>Example set of transient node attributes for node "cl-virt-1"</title>
@@ -3174,7 +3182,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>In the above example, we can see that the pingd:0 resource has failed once, at Mon Apr  6 11:22:22 2009.<footnote>
           <para> You can use the following Perl one-liner to print a human readable of any seconds-since-epoch value:</para>
           <para>         perl -e 'print scalar(localtime($seconds))."\n"'</para>
-	</footnote>  We also see that the node is connected to three "pingd" peers and that all known resources have been checked for on this machine (probe_complete).</para></section><section><title>Operation History</title>
+	</footnote>  We also see that the node is connected to three "pingd" peers and that all known resources have been checked for on this machine (probe_complete).</para>
+    </section>
+    <section id="s-status-history">
+      <title>Operation History</title>
       <para>A node's resource history is held in the lrm_resources tag (a child of the lrm tag). The information stored here includes enough information for the cluster to stop the resource safely if it is removed from the configuration section. Specifically we store the resource's ID, class, type and provider.</para>
       <para>          &lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"></para>
       <para>A record of the apcstonith resource</para>
@@ -3209,7 +3220,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             </row>
             <row>
               <entry>rc-code</entry>
-              <entry>The job's result.  Refer to the <link linkend="">More About OCF Resource Agents</link> Appendix for details on what the values here mean and how they are interpreted.</entry>
+              <entry>The job's result.  Refer to <xref linkend="s-ocf-return-codes"/> for details on what the values here mean and how they are interpreted.</entry>
             </row>
             <row>
               <entry>last-run</entry>
@@ -3246,9 +3257,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             <row>
               <entry>crm-debug-origin</entry>
               <entry>Diagnostic indicator. The origin of the current values.</entry>
-        </row></tbody></tgroup>
+            </row>
+	  </tbody>
+	</tgroup>
       </table>
-      <section><title>Simple Example</title>
+      <section id="s-status-example">
+	<title>Simple Example</title>
 	<figure>
 	  <title>A monitor operation performed by the cluster to determine the current state of the apcstonith resource</title>
 	  <programlisting>
@@ -3284,7 +3298,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
     </section>
   </chapter>
-  <appendix id="faq">
+  <appendix id="ap-faq">
     <title>FAQ</title>
     <section>
       <qandaset defaultlabel="qanda">
@@ -3357,7 +3371,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	    <para>Which Messaging Layer Should I Choose?</para>
 	  </question>
 	  <answer>
-	    <para>This is discussed in the <link linkend="">Installation</link> appendix.</para>
+	    <para>This is discussed in <xref linkend="ap-install"/>.</para>
 	  </answer>
 	</qandaentry>
 	<qandaentry>
@@ -3383,11 +3397,16 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </qandaset>
     </section>
   </appendix>
-  <appendix id="ocf"><title>More About OCF Resource Agents</title>
-    <section><title>Location of Custom Scripts</title>
+  <appendix id="ap-ocf">
+    <title>More About OCF Resource Agents</title>
+    <section id="s-ocf-location">
+      <title>Location of Custom Scripts</title>
       <para>OCF Resource Agents are found in /usr/lib/ocf/resource.d/{provider}.</para>
       <para>When creating your own agents, you are encouraged to create a new directory under /usr/lib/ocf/resource.d/ so that they are not confused with (or overwritten by) the agents shipped with Heartbeat. So, for example, if you chose the provider name of bigCorp and wanted a new resource named bigApp, you would create a script called /usr/lib/ocf/resource.d/bigCorp/bigApp and define a resource:</para>
-      <para>&lt;primitive id="custom-app" class="ocf" provider="bigCorp" type="bigApp"/></para></section><section><title>Actions</title>
+      <para>&lt;primitive id="custom-app" class="ocf" provider="bigCorp" type="bigApp"/></para>
+    </section>
+    <section id="s-ocf-actions">
+      <title>Actions</title>
       <para>All OCF Resource Agents are required to implement the following actions</para>
       <table frame="all">
 	<title>Required Actions for OCF Agents</title>
@@ -3462,8 +3481,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<listitem>recover - a variant of the start action, this should try to recover a resource locally.</listitem>
       </orderedlist>
       <para/>
-      <para>Remember to use ocf-tester to verify that your new agent complies with the OCF standard properly.</para></section><section><title>
-	<anchor id="HowDoestheClusterInterprett"/>How Does the Cluster Interpret the OCF Return Codes?</title>
+      <para>Remember to use ocf-tester to verify that your new agent complies with the OCF standard properly.</para>
+    </section>
+    <section id="s-ocf-return-codes">
+      <title>How Does the Cluster Interpret the OCF Return Codes?</title>
       <para>The first thing the cluster does is check the return code against the expected result.  If the result does not match the expected value, then the operation is considered to have failed and recovery action is initiated.  </para>
       <para>There are three types of failure recovery:</para>
       <table frame="all">
@@ -3577,22 +3598,22 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</orderedlist>
     </section></section>
   </appendix>
-  <appendix id="changes">
-    <anchor id="WhatChangedin10"/>     
+  <appendix id="ap-changes">
     <title>What Changed in 1.0</title>
-    <section><title>New</title>
+    <section id="s-changes-new">
+      <title>New</title>
       <itemizedlist>
-	<listitem>Failure timeouts.  See <link linkend="">Moving Resources Due to Failure</link></listitem>
-	<listitem>New section for resource and operation defaults. See <link linkend="">Setting Global Defaults for Resource Options</link> and  <link linkend="">Setting Global Defaults for Operations</link></listitem>
-	<listitem>Tool for making offline configuration changes.  See <link linkend="">Making Configuration Changes in a Sandbox</link></listitem>
-	<listitem>Rules, instance_attributes, meta_attributes and sets of operations can be defined once and referenced in multiple places.  See <link linkend="">Reusing Rules, Options and Sets of Operations</link></listitem>
+	<listitem>Failure timeouts.  See <xref linkend="s-failure-migration"/></listitem>
+	<listitem>New section for resource and operation defaults. See <xref linkend="s-resource-defaults"/> and  <xref linkend="s-operation-defaults"/></listitem>
+	<listitem>Tool for making offline configuration changes.  See <xref linkend="s-config-sandboxes"/></listitem>
+	<listitem>Rules, instance_attributes, meta_attributes and sets of operations can be defined once and referenced in multiple places.  See <xref linkend="s-reusing-config-elements"/></listitem>
 	<listitem>The CIB now accepts XPath-based create/modify/delete operations. See the cibadmin help text.</listitem>
-	<listitem>Multi-dimensional colocation and ordering constraints.  See <link linkend="">Ordering</link> and <link linkend="">Collocating Sets of Resources</link></listitem>
-	<listitem>The ability to connect to the CIB from non-cluster machines. See <link linkend="">Connecting to the Cluster Configuration from Remote Machines</link></listitem>
-	<listitem>Allow recurring actions to be triggered at known times. See <link linkend="">Specifying When Recurring Actions are Performed</link></listitem>
+	<listitem>Multi-dimensional colocation and ordering constraints.  See <xref linkend="s-resource-sets-ordering"/> and <xref linkend="s-resource-sets-collocation"/></listitem>
+	<listitem>The ability to connect to the CIB from non-cluster machines. See <xref linkend="s-remote-connection"/></listitem>
+	<listitem>Allow recurring actions to be triggered at known times. See <xref linkend="s-recurring-start"/></listitem>
       </itemizedlist>
     </section>
-    <section>
+    <section id="s-changes">
       <title>Changed</title>
       <itemizedlist>
 	<listitem>
@@ -3607,8 +3628,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</listitem>
 	<listitem>The stonith-enabled option now defaults to true.</listitem>
 	<listitem>The cluster will refuse to start resources if stonith-enabled is true (or unset) and no STONITH resources have been defined</listitem>
-	<listitem>The attributes of colocation and ordering constraints were renamed for clarity.  See <link linkend="">Specifying the Order Resources Should Start/Stop In</link> and  <link linkend="">Placing Resources Relative to other Resources</link></listitem>
-	<listitem>resource-failure-stickiness has been replaced by migration-threshold.  See <link linkend="">Moving Resources Due to Failure</link></listitem>
+	<listitem>The attributes of colocation and ordering constraints were renamed for clarity.  See <xref linkend="s-resource-ordering"/> and <xref linkend="s-resource-colocation"/></listitem>
+	<listitem>resource-failure-stickiness has been replaced by migration-threshold.  See <xref linkend="s-failure-migration"/></listitem>
 	<listitem>The arguments for command-line tools has been made consistent</listitem>
 	<listitem>
           <para>Switched to RelaxNG schema validation and libxml2 parser.</para>
@@ -3632,7 +3653,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<listitem>
           <para>Ping node information no longer needs to be added to ha.cf  Simply include the lists of hosts in your ping resource(s).</para>
 	</listitem>
-    </itemizedlist></section><section><title>Removed</title>
+      </itemizedlist>
+    </section>
+    <section id="s-changes-removed">
+      <title>Removed</title>
       <itemizedlist>
 	<listitem>
           <para>Syntax</para>
@@ -3641,17 +3665,16 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	      It is no longer possible to set resource meta options as top-level attributes.  Use meta attributes instead.
 	    </listitem>
 	    <listitem>
-	      Resource and operation defaults are no longer read from crm_config.  See <link linkend="">Setting Global Defaults for Resource Options</link> and <link linkend="">Setting Global Defaults for Operations</link> instead.
+	      Resource and operation defaults are no longer read from crm_config.  See <xref linkend="s-resource-defaults"/> and <xref linkend="s-operation-defaults"/> instead.
 	    </listitem>
 	  </itemizedlist>
 	</listitem>
       </itemizedlist>
     </section>
   </appendix>
-  <appendix id="install">
+  <appendix id="ap-install">
     <title>Installation</title>
-    <section>
-      <anchor id="ChoosingaClusterStack"/>
+    <section id="s-install-stack">
       <title>Choosing a Cluster Stack</title>
       <para>Ultimately the choice of cluster stack is a personal decision that must be made in the context of you or your company's needs and strategic direction.  Pacemaker currently functions equally well with both stacks.</para>
       <para>Here are some factors that may influence the decision</para>
@@ -3685,7 +3708,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<listitem>
           <para>To date, Pacemaker has received less real-world testing on OpenAIS than it has on Heartbeat.</para>
 	</listitem>
-    </orderedlist></section><section><title>Enabling Pacemaker</title><section><title>For OpenAIS</title>
+      </orderedlist>
+    </section>
+    <section id="s-install-enable">
+      <title>Enabling Pacemaker</title>
+      <section id="s-install-enable-ais">
+	<title>For OpenAIS</title>
 	<para>The OpenAIS configuration is normally located in /etc/ais/openais.conf and an example for a machine with an address of 1.2.3.4 in a cluster communicating on port 1234 (without peer authentication and message encryption) is shown below.</para>
 	<para>totem {</para>
 	<para>        version: 2</para>
@@ -3726,16 +3754,19 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>}</para>
 	<para>Configuration fragment for enabling Pacemaker under OpenAIS </para>
 	<para>The cluster needs to be run as root so that its child processes (the lrmd in particular) have sufficient privileges to perform the actions requested of it.  After-all, a cluster manager that can't add an IP address or start apache is of little use.</para>
-	<para>The second directive is the one that actually instructs the cluster to run Pacemaker.</para></section><section><title>For Heartbeat</title>
+	<para>The second directive is the one that actually instructs the cluster to run Pacemaker.</para>
+      </section>
+      <section id="s-install-enable-heartbeat"><title>For Heartbeat</title>
 	<para>Add the following to a functional ha.cf configuration file and restart Heartbeat</para>
 	<para>crm respawn</para>
 	<para>Configuration fragment for enabling Pacemaker under Heartbeat</para>
-    </section></section>
+      </section>
+    </section>
   </appendix>
-  <appendix id="upgrade">
-    <anchor id="AppendixUpgradingClusterSoft"/>
+  <appendix id="ap-upgrade">
     <title>Upgrading Cluster Software</title>
-    <section><title>Upgrade Methodologies</title><section><title>Version Compatibility</title>
+    <section id="s-upgrade-compatible">
+      <title>Version Compatibility</title>
 	<para>When releasing newer versions we take care to make sure we are backwardly compatible with older versions. While you will always be able to upgrade from version x to x+1, in order to continue to produce high quality software it may occasionally be necessary to drop compatibility with older versions.</para>
 	<para>There will always be an upgrade path from any series-2 release to any other series-2 release.</para>
 	<para>There are three approaches to upgrading your cluster software</para>
@@ -3792,7 +3823,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </tgroup>
 	</table>
       </section>
-      <section>
+      <section id="s-upgrade-shutdown">
 	<title>Complete Cluster Shutdown</title>
 	<para>In this scenario one shuts down all cluster nodes and resources and upgrades all the nodes before restarting the cluster.</para>
 	<section><title>Procedure</title>
@@ -3819,8 +3850,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 		</listitem>
 	      </orderedlist>
 	    </listitem>
-      </orderedlist></section></section><section><title>Rolling (node by node)</title>
-	<para>In this scenario each node is removed from the cluster, upgraded and then brought back online until all nodes are running the newest version.</para><section><title>Procedure</title>
+	  </orderedlist>
+	</section>
+      </section>
+      <section id="s-upgrade-rolling">
+	<title>Rolling (node by node)</title>
+	<para>In this scenario each node is removed from the cluster, upgraded and then brought back online until all nodes are running the newest version.</para>
+	<section>
+	  <title>Procedure</title>
 	  <para>On each node:</para>
 	  <orderedlist>
 	    <listitem>
@@ -3838,7 +3875,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               <para>Start the cluster stack.  This must be the same cluster stack that the rest of the cluster is using.</para>
 	    </listitem>
 	  </orderedlist>
-	  <para>Repeat for each node in the cluster</para></section><section><title>Version Compatibility</title>
+	  <para>Repeat for each node in the cluster</para>
+	</section>
+	<section>
+	  <title>Version Compatibility</title>
 	  <table frame="all">
 	    <title>Version Compatibility Table</title>
 	    <tgroup cols="2">
@@ -3883,7 +3923,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </orderedlist>
 	</section>
       </section>
-      <section>
+      <section id="s-upgrade-reattach">
 	<title>Disconnect &amp; <ulink url="http://linux-ha.org/v2/upgrade/reattach">Reattach</ulink></title>
 	<para>A variant of a complete cluster shutdown, but the resources are left active and re-detected when the cluster is restarted.</para>
 	<section>
@@ -3941,14 +3981,23 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               <para>The oldest version of the CRM to support this upgrade type was in Heartbeat 2.0.4</para>
 	    </listitem>
 	  </orderedlist>
-      </section></section>
+      </section>
     </section>
   </appendix>
-  <appendix id="upgrade-config"><title>Upgrading the Configuration from 0.6</title>
-    <section><title>Preparation</title>
-      <para>Download the latest DTD from <ulink url="http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd"/> and ensure your configuration validates.</para></section><section><title>Perform the upgrade</title><section><title>Upgrade the software</title>
-	<para>Refer to the appendix: <link linkend="">Upgrading Cluster Software</link>
-      </para></section><section><title>Upgrade the Configuration</title>
+  <appendix id="ap-upgrade-config">
+    <title>Upgrading the Configuration from 0.6</title>
+    <section id="s-upgrade-config-prep">
+      <title>Preparation</title>
+      <para>Download the latest DTD from <ulink url="http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd"/> and ensure your configuration validates.</para>
+    </section>
+    <section id="s-upgrade-config-perform">
+      <title>Perform the upgrade</title>
+      <section>
+	<title>Upgrade the software</title>
+	<para>Refer to the appendix: <xref linkend="ap-upgrade"/></para>
+      </section>
+      <section>
+	<title>Upgrade the Configuration</title>
 	<para>As XML is not the friendliest of languages, it is common for cluster administrators to have scripted some of their activities.  In such cases, it is likely that those scripts will not work with the new 1.0 syntax.</para>
 	<para>In order to support such environments, it is actually possible to continue using the old 0.6 syntax.</para>
 	<para>The downside however, is that not all the new features will be available and there is a performance impact since the cluster must do a non-persistent configuration upgrade before each transition.  So while using the old syntax is possible, it is not advisable to continue using it indefinitely.</para>
@@ -4005,14 +4054,17 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>Test what the cluster will do when you upload the new configuration</para>
 	<command>ptest -VVVVV --live-check --save-dotfile upgrade06.dot</command>
 	<para>graphviz upgrade06.dot</para>
-	<para>Verify that either no resource actions will occur or that you are happy with any that are scheduled.  If the output contains actions you do not expect (possibly due to changes to the score calculations), you may need to make further manual changes.  See <link linkend="">Testing Your Configuration Changes</link> for further details on how to interpret the output of ptest.</para>
+	<para>Verify that either no resource actions will occur or that you are happy with any that are scheduled.  If the output contains actions you do not expect (possibly due to changes to the score calculations), you may need to make further manual changes.  See <xref linkend="s-config-testing-changes"/> for further details on how to interpret the output of ptest.</para>
 	<orderedlist>
 	  <listitem>
             <para>Upload the changes</para>
 	  </listitem>
 	</orderedlist>
 	<para>crm_shadow --commit upgrade06 --force</para>
-	<para>If this step fails, something really strange has occurred.  You should report a bug. </para></section><section><title>Manually Upgrading the Configuration</title>
+	<para>If this step fails, something really strange has occurred.  You should report a bug. </para>
+      </section>
+      <section id="s-upgrade-config-manual">
+	<title>Manually Upgrading the Configuration</title>
 	<para>It is also possible to perform the configuration upgrade steps manually.  To do this</para>
 	<orderedlist>
 	  <listitem>Locate the upgrade06.xsl conversion script or download the latest version from <ulink url="http://hg.clusterlabs.org/pacemaker/stable-1.0/raw-file/tip/xml/upgrade06.xsl"/></listitem>
@@ -4024,8 +4076,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
     </section>
   </appendix>
-  <appendix id="lsb">
-    <anchor id="HowCanITellifanInitScriptcopycopy"/>
+  <appendix id="ap-lsb">
     <title>Is This init Script LSB Compatible?</title>
     <para>Assuming some_service is configured correctly and currently not active, the following sequence will help you determine if it is LSB compatible:</para>
     <orderedlist>
@@ -4117,8 +4168,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
     <para>The script can use one of the error codes (other than 3) listed in the LSB spec to indicate that it is active but failed. This tells the cluster that before moving the resource to another node, it needs to stop it on the existing one first. </para>
     <para>If the answer to any of the above questions is no, then the script is not LSB compliant. Your options are then to either fix the script or write an OCF agent based on the existing script.</para>
   </appendix>
-  <appendix id="samples"><title>Sample Configurations</title>
-    <section><title>An Empty Configuration</title>
+  <appendix id="ap-samples"><title>Sample Configurations</title>
+    <section id="s-sample-empty">
+      <title>An Empty Configuration</title>
       <example>
 	<title>An empty configuration</title>
 	<programlisting>
@@ -4133,7 +4185,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/cib>
 	</programlisting>
       </example>
-    </section><section><title>A Simple Configuration</title>
+    </section>
+    <section id="s-sample-simple">
+      <title>A Simple Configuration</title>
       <example>
 	<title>2 nodes, some cluster options and a resource</title>
 	<programlisting>
@@ -4172,7 +4226,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   &lt;/cib>
 	</programlisting>
       </example>
-      <para>In this example, we have one resource (an IP address) that we check every five minutes and will run on host c001n01 until either the resource fails 10 times or the host shuts down.</para></section><section><title>An Advanced Configuration</title>
+      <para>In this example, we have one resource (an IP address) that we check every five minutes and will run on host c001n01 until either the resource fails 10 times or the host shuts down.</para>
+    </section>
+    <section id="s-sample-advanced">
+      <title>An Advanced Configuration</title>
       <para/>
       <example>
 	<title>groups and clones with stonith</title>
@@ -4242,7 +4299,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </example>
     </section>
   </appendix>
-  <appendix id="more">
+  <appendix id="ap-further-reading">
     <title>Further Reading</title>
     <itemizedlist>
       <listitem>Project Website: <ulink url="http://www.clusterlabs.org/"/></listitem>
