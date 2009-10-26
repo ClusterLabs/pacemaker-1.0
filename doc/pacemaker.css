@@ -75,6 +75,10 @@ body {
   background-color: #d6d3ce;
 }
 
+em {
+  font-weight: bold;
+}
+
 /* For links, we use LINBIT orange and grey */
 a:link { 
   font-weight: bold;
