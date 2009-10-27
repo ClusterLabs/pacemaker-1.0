@@ -459,7 +459,7 @@
 	  <title>Small Cluster Transition</title>
 	  <mediaobject>
 	    <imageobject>
-	      <imagedata fileref="images/Policy-Engine-1.png" width="16cm" depth="6cm" align="center"/> 
+	      <imagedata fileref="images/Policy-Engine-small.png" width="16cm" depth="6cm" align="center"/> 
 	    </imageobject>
 	    <caption>An example transition graph as represented by Graphviz</caption>
 	  </mediaobject>
