@@ -4697,7 +4697,15 @@ This can happen when a resource that is expected to be in the Master state is fo
 		<entry>Service Outage During Upgrade</entry>
 		<entry>Service Recovery During Upgrade</entry>
 		<entry>Exercises Failover Logic/Configuration</entry>
-		<entry>Allows change of cluster stack</entry>
+		<entry>
+		  Allows change of cluster stack type
+		  <footnote>
+		    <para>
+		      For example, switching from Heartbeat to OpenAIS.
+		      Consult the Heartbeat or OpenAIS documentation to see if upgrading them to a newer version is also supported
+		    </para>
+		  </footnote>
+		</entry>
               </row>
             </thead>
 	    <tbody>
@@ -4779,7 +4787,11 @@ This can happen when a resource that is expected to be in the Master state is fo
 	      </orderedlist>
 	    </listitem>
 	    <listitem>
-              <para>Start the cluster stack. This must be the same cluster stack that the rest of the cluster is using.</para>
+              <para>
+		Start the cluster stack. 
+		This must be the same type of cluster stack (OpenAIS or Heartbeat) that the rest of the cluster is using.
+		Upgrading OpenAIS/Heartbeat may also be possible, please consult the documentation for those projects to see if the two versions will be compatible. 
+	      </para>
 	    </listitem>
 	  </orderedlist>
 	  <para>Repeat for each node in the cluster</para>
