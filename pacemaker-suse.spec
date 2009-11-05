@@ -16,12 +16,14 @@
 #
 
 # norootforbuild
-#global _without_heartbeat 1
+#global _without_ais		1
+#global _without_heartbeat	1
+%global pcmk_docdir %{_docdir}/%{name}
 
 Name:           pacemaker
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
-Version:        1.0.5
-Release:        1
+Version:        1.0.6
+Release:	1%{?dist}
 License:        GPL v2 or later; LGPL v2.1 or later
 Url:            http://www.clusterlabs.org
 Group:		Productivity/Clustering/HA
@@ -31,28 +33,27 @@ AutoReqProv:    on
 Conflicts:      heartbeat < 2.99
 Requires(pre):	cluster-glue
 Requires:       libpacemaker3 = %{version}-%{release}
+Requires:	resource-agents
+
 BuildRequires:  e2fsprogs-devel glib2-devel libglue-devel libxml2-devel libxslt-devel pkgconfig python-devel
 BuildRequires:  gnutls-devel ncurses-devel net-snmp-devel pam-devel openssl-devel
 
-%if 0%{!?_without_ais}
-BuildRequires:  libopenais-devel
-Requires:       openais
+# SLES10 doesn't pull in tcpd-devel with net-snmp-devel
+BuildRequires:  libbz2-devel help2man tcpd-devel
+
+%if !0%{?_without_ais}
+BuildRequires:  libcorosync-devel
 %endif
-%if 0%{!?_without_heartbeat}
+
+%if !0%{?_without_heartbeat}
 BuildRequires:  heartbeat-devel
-Requires:       heartbeat
 %endif
 
 %define _libexecdir %{_libdir}
-# SLES10 doesn't pull in tcpd-devel with net-snmp-devel
-BuildRequires:  libbz2-devel help2man tcpd-devel
-Recommends:     libdlm resource-agents
-Suggests:       graphviz
+
 %if 0%{?suse_version} > 1999
 BuildRequires:  libesmtp-devel
 %endif
-%else
-Requires:     resource-agents
 
 %description
 Pacemaker is an advanced, scalable High-Availability cluster resource
@@ -121,8 +122,9 @@ export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/gnome/%{_lib}/pkgconfig:/opt/gnome
 ./autogen.sh
 %{configure} --localstatedir=%{_var}			\
 	--with-ais-prefix=%{_prefix}   			\
-	%{?_without_heartbeat:--without-heartbeat}      \
-	%{?_without_ais:--without-ais}                  \
+	%{?_without_heartbeat}      			\
+	%{?_without_ais}		                \
+	--docdir=%{pcmk_docdir}				\
 	--enable-fatal-warnings=no 
 export MAKE="make %{?jobs:-j%jobs}"
 make %{?jobs:-j%jobs}
@@ -160,8 +162,7 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %defattr(-,root,root)
 %dir %{_libdir}/heartbeat
 %dir %{_var}/lib/heartbeat
-%dir %{_datadir}/doc/packages/pacemaker
-%dir %{_datadir}/doc/packages/pacemaker/templates
+%dir %{pcmk_docdir}
 %{_datadir}/pacemaker
 %{_datadir}/snmp/mibs/PCMK-MIB.txt
 %{_libdir}/heartbeat/*
@@ -183,21 +184,21 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %{_sbindir}/cibpipe
 %{_sbindir}/crm_node
 
-%if 0%{!?_without_heartbeat}
+%if !0%{?_without_heartbeat}
 %{_sbindir}/crm_uuid
 %else
 %exclude %{_sbindir}/crm_uuid
 %endif
 
-%doc %{_datadir}/doc/packages/pacemaker/AUTHORS
-%doc %{_datadir}/doc/packages/pacemaker/README
-%doc %{_datadir}/doc/packages/pacemaker/README.hb2openais
-%doc %{_datadir}/doc/packages/pacemaker/COPYING
-%doc %{_datadir}/doc/packages/pacemaker/COPYING.LGPL
-%doc %{_datadir}/doc/packages/pacemaker/crm_cli.txt
-%doc %{_datadir}/doc/packages/pacemaker/crm_fencing.txt
-%doc %{_datadir}/doc/packages/pacemaker/*.html
-%doc %{_datadir}/doc/packages/pacemaker/templates/*
+# Packaged elsewhere
+%exclude %{pcmk_docdir}/AUTHORS
+%exclude %{pcmk_docdir}/COPYING
+%exclude %{pcmk_docdir}/COPYING.LIB
+
+%doc %{pcmk_docdir}/README.hb2openais
+%doc %{pcmk_docdir}/crm_cli.txt
+%doc %{pcmk_docdir}/crm_fencing.txt
+%doc %{pcmk_docdir}/*.html
 %doc %{_mandir}/man8/*.8*
 
 %dir %attr (750, hacluster, haclient) %{_var}/lib/heartbeat/crm
@@ -206,7 +207,7 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %dir /usr/lib/ocf
 %dir /usr/lib/ocf/resource.d
 /usr/lib/ocf/resource.d/pacemaker
-%if 0%{!?_without_ais}
+%if !0%{?_without_ais}
 %{_libexecdir}/lcrso/pacemaker.lcrso
 %endif
 
