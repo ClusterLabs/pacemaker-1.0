@@ -28,7 +28,7 @@ Source0:	pacemaker.tar.bz2
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 AutoReqProv:	on
 Requires(pre):	cluster-glue
-Requires:	resource-agents
+Requires:	resource-agents python
 Requires:       perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
 
 %if 0%{?fedora} || 0%{?centos} > 4 || 0%{?rhel} > 4

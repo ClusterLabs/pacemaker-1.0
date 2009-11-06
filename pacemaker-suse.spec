@@ -33,7 +33,7 @@ AutoReqProv:    on
 Conflicts:      heartbeat < 2.99
 Requires(pre):	cluster-glue
 Requires:       libpacemaker3 = %{version}-%{release}
-Requires:	resource-agents
+Requires:	resource-agents python
 
 BuildRequires:  e2fsprogs-devel glib2-devel libglue-devel libxml2-devel libxslt-devel pkgconfig python-devel
 BuildRequires:  gnutls-devel ncurses-devel net-snmp-devel pam-devel openssl-devel
