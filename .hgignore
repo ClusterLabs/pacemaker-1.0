@@ -161,6 +161,8 @@ pacemaker.tar.gz
 # Entries better done as regexp's to avoid matching too broadly
 syntax: regexp
 ^config\.*
+^doc/.*/tmp
+^doc/.*/publish
 README$
 Makefile$
 Makefile.in$

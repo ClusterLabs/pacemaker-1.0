@@ -1,48 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE book
-	  PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
-<book lang="en">
-  <title>Pacemaker Configuration Explained</title>
-  <bookinfo>
-    <author>
-      <firstname>Andrew</firstname>
-      <surname>Beekhof</surname>
-      <email>andrew@beekhof.net</email>
-      <email>pacemaker@oss.clusterlabs.org</email>
-    </author>
-    <revhistory>
-      <revision>
-        <revnumber>1.0.1</revnumber>
-        <date>19 Oct 2009</date>
-        <revremark>Import from PDF.</revremark>
-      </revision>
-      <revision>
-        <revnumber>1.0.2</revnumber>
-        <date>26 Oct 2009</date>
-        <revremark>Initial import and massaging of docbook xml complete</revremark>
-      </revision>
-    </revhistory>
-  </bookinfo>
-  <xi:include href="Intro.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Basics.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Options.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Nodes.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Resources.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Constraints.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <chapter id="ch-notification">
-    <title>Receiving Notification of Cluster Events</title>
-    <section id="s-notify-email"><title>Configuring Email Notifications</title></section>
-    <section id="s-notify-snmp"><title>Configuring SNMP Notifications</title></section>
-  </chapter>
-  <xi:include href="Rules.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Advanced-Options.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Advanced-Resources.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Stonith.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Status.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-Faq.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-OCF.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-Changes.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-Install.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
   <appendix id="ap-debug">
     <title>Debugging Cluster Startup</title>
     <section id="s-debug-openais">
@@ -171,20 +126,3 @@
       </section>
      </section>
   </appendix>
-  <xi:include href="Ap-Upgrade.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-Upgrade-Config.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-LSB.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <xi:include href="Ap-Samples.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-  <appendix id="ap-further-reading">
-    <title>Further Reading</title>
-    <itemizedlist>
-      <listitem>Project Website: <ulink url="http://www.clusterlabs.org/"/> and Documentation <ulink url="http://www.clusterlabs.org/wiki/Documentation"/></listitem>
-      <listitem>
-	<para>Cluster Commands</para>
-	<para>A comprehensive guide to cluster commands has been written by Novell and can be found at: <ulink url="http://www.novell.com/documentation/sles11/book_sleha/index.html?page=/documentation/sles11/book_sleha/data/book_sleha.html"/></para>
-      </listitem>
-      <listitem>Heartbeat configuration: <ulink url="http://www.linux-ha.org/"/></listitem>
-      <listitem>OpenAIS Configuration: <ulink url="http://www.openais.org/"/></listitem>
-    </itemizedlist>
-  </appendix>
-</book>
