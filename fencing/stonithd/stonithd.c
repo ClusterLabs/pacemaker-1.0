@@ -104,6 +104,7 @@
 #include <crm/crm.h>
 #include <crm/common/cluster.h>
 #include <crm/common/xml.h>
+#include <crm/common/util.h>
 
 #undef CL_DROP_PRIVS
 #ifndef CL_DROP_PRIVS
@@ -345,6 +346,7 @@ static stonith_ops_t * new_stonith_ops_t(struct ha_msg * request);
 static void free_stonith_ops_t(stonith_ops_t * st_op);
 static void free_common_op_t(gpointer data);
 static void free_stonith_rsc(stonith_rsc_t * srsc);
+static void stonithd_metadata(void);
 static stonith_rsc_t * get_started_stonith_resource(const char * rsc_id);
 static stonith_rsc_t * get_local_stonithobj_can_stonith(const char * node_name,
 						const char * begin_rsc_id );
@@ -425,8 +427,16 @@ static const char * M_STARTUP = "start up successfully.",
 		  * M_STONITH_SUCCEED = "Succeeded to STONITH the node",
 		  * M_STONITH_FAIL    = "Failed to STONITH the node";
 
+pe_cluster_option stonithd_opts[] = {
+	/* name, old-name, validate, default, description */
+	{ "stonith-timeout", NULL, "time", NULL, "60s", &check_timer,
+	  "How long to wait for the STONITH action to complete. Overrides the stonith-timeout cluster property", NULL },
+	{ "priority", NULL, "integer", NULL, "0", &check_number,
+	  "The priority of the stonith resource. The lower the number, the higher the priority.", NULL },
+};
+
 static const char * simple_help_screen =
-"Usage: stonithd [-ahikrsv]\n"
+"Usage: stonithd [[-ahikrsv] | metadata]\n"
 "	-a	Start up alone outside of heartbeat.\n" 
 "		By default suppose it be started up and monitored by heartbeat.\n"
 "	-h	This help information\n"
@@ -435,7 +445,8 @@ static const char * simple_help_screen =
 "	-r	Register to apphbd. Now not register to apphbd by default.\n"
 "	-s	Show the status of the daemons.\n"
 "	-v	Run the stonithd in debug mode. Under debug mode more\n"
-"		debug information is written to log file.\n";
+"		debug information is written to log file.\n"
+"	metadata print stonithd metadata.\n";
 /*	-t	Test mode only.\n" 	*/
 
 static const char * optstr = "ahi:krsvt";
@@ -578,6 +589,15 @@ init_hb_msg_handler(void)
 }
 #endif
 
+static void
+stonithd_metadata(void)
+{
+	config_metadata("stonithd", "1.0",
+			"stonithd Options",
+			"This is a fake resource that details the instance attributes handled by stonithd.",
+			stonithd_opts, DIMOF(stonithd_opts));
+}
+
 int
 main(int argc, char ** argv)
 {
@@ -664,6 +684,11 @@ main(int argc, char ** argv)
 					LSB_EXIT_EINVAL : MAGIC_EC;
 		}
 	} while (1);
+
+	if(argc - optind == 1 && safe_str_eq("metadata", argv[optind])) {
+		(void)stonithd_metadata();
+		return 0;
+	}
 
 	cl_inherit_logging_environment(0);
 
