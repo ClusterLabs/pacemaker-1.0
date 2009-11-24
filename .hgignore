@@ -139,6 +139,10 @@ doc/crm_resource.8
 doc/faqntips.txt
 doc/heartbeat_api.txt
 doc/rsync.txt
+doc/Pacemaker_Explained.txt
+doc/crm_cli.html
+doc/crm_fencing.html
+doc/index.html
 fencing/stonithd/stonithd
 fencing/test/apitest
 xml/*-1.0.rng
