@@ -1,4 +1,10 @@
 #!/bin/sh
+#
+# License: GNU General Public License (GPL)
+#
+# postinst script for heartbeat
+#
+# see: dh_installdeb(1)
 
 set -e
 
@@ -13,34 +19,36 @@ set -e
 #
 
 case "$1" in
-	configure)
-		if ! getent group haclient > /dev/null ; then
-			addgroup --system --group haclient > /dev/null
+    configure)
+
+  	addgroup --system haclient
+        adduser --system hacluster --ingroup haclient --home /var/lib/heartbeat
+
+	for i in /var/run/heartbeat/crm /var/lib/heartbeat/crm \
+			/var/lib/heartbeat/pengine /var/lib/pengine; do
+		if [ ! -d $i ]; then
+		  mkdir -p $i
 		fi
-		
-		if ! getent passwd hacluster > /dev/null ; then
-			adduser --system --no-create-home \
-				--ingroup haclient \
-				--gecos "Heartbeat System Account" \
-				--no-create-home --disabled-login \
-				--home /usr/lib/heartbeat --shell /bin/false  \
-				--disabled-password hacluster > /dev/null
-		fi
+		chown hacluster $i
+		chgrp haclient $i
+	done
+    ;;
+	
+    purge)
+        id haclient >/dev/null 2>&1;
+        if [ "x$?" = "x0" ]; then userdel -rf haclient && groupdel hacluster; fi
+        
+        rm -rf /var/lib/openais
+	rm -rf /var/log/openais
+    ;;
+	
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
 
-		for i in /var/run/crm	/var/lib/pengine; do
-			chmod 750 $i
-			chown hacluster $i
-			chgrp haclient $i
-		done
-	;;
-
-	abort-upgrade|abort-remove|abort-deconfigure)
-	;;
-
-	*)
-		echo "postinst called with unknown argument \`$1'" >&2
-		exit 0
-	;;
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 0
+    ;;
 esac
 
 # dh_installdeb will replace this with shell code automatically

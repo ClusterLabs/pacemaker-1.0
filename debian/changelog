@@ -1,8 +1,51 @@
-pacemaker (1.0.4.1+hg20090606-1~bpo50+1) lenny-backports; urgency=low
+pacemaker (1.0.6+hg20091102-4~bpo50+1) lenny-backports; urgency=low
 
-  * Backport for Debian GNU/Linux 5.0 alias Lenny
+  * Rebuild for lenny-backports.
 
- -- Martin Loschwitz <madkiss@debian.org>  Sat, 06 Jun 2009 10:06:00 +0200
+ -- Martin Loschwitz <madkiss@debian.org>  Tue, 03 Nov 2009 10:44:24 +0000
+
+pacemaker (1.0.6+hg20091102-4) unstable; urgency=low
+
+  * Make pacemaker depend on cluster-agents to make sure it does not
+    get removed during updates. 
+
+ -- Martin Loschwitz <madkiss@debian.org>  Tue, 03 Nov 2009 09:52:57 +0000
+
+pacemaker (1.0.6+hg20091102-3) unstable; urgency=low
+
+  * Replace dependency on cluster-messaging-framework with corosync or
+    heartbeat -- enforce heartbeat for default installations 
+
+ -- Martin Loschwitz <madkiss@debian.org>  Tue, 03 Nov 2009 08:40:05 +0000
+
+pacemaker (1.0.6+hg20091102-2) unstable; urgency=low
+
+  * Fix broken dependency on heartbeat 
+
+ -- Martin Loschwitz <madkiss@debian.org>  Tue, 03 Nov 2009 07:49:33 +0000
+
+pacemaker (1.0.6+hg20091102-1) unstable; urgency=low
+
+  * New upstream version: 1.0.6
+  * Undo packagesplit for pacemaker -- it's one package now
+  * Depend on cluster-messaging-framework
+
+ -- Martin Loschwitz <madkiss@debian.org>  Mon, 02 Nov 2009 13:35:16 +0000
+
+pacemaker (1.0.5+hg20091012-1) unstable; urgency=low
+
+  * New upstream version
+  * Switch back to openais-legacy for the time being
+
+ -- Martin Loschwitz <madkiss@debian.org>  Mon, 12 Oct 2009 17:30:00 +0200
+
+pacemaker (1.0.5+hg20090915-1) unstable; urgency=low
+
+  * New upstream version
+  * Some cleanups in debian/-subdirectory
+  * Changes to control-file to reflect new HB situation
+
+ -- Martin Loschwitz <madkiss@debian.org>  Tue, 15 Sep 2009 10:10:00 +0200
 
 pacemaker (1.0.4.1+hg20090606-1) experimental; urgency=low
   

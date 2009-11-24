@@ -3,10 +3,10 @@
 # Copyright 1997 to 1999 by Joey Hess.
 # License: GNU General Public License (GPL)
 
-#Thanks to Paolo Molaro <lupus@debian.org> and heartbeat_0.4.6-2.diff
+# Thanks to Paolo Molaro <lupus@debian.org> and heartbeat_0.4.6-2.diff
 
 # Uncomment this to turn on verbose mode.
-export DH_VERBOSE=1
+# export DH_VERBOSE=1
 
 #
 # Path to SSH and SCP
@@ -22,10 +22,11 @@ export DH_VERBOSE=1
 #
 
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var 	  \
-  --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso \
+  --mandir=/usr/share/man \
   --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs 	  \
   --disable-fatal-warnings --enable-glib-malloc --with-esmtp 	  \
-  --with-snmp
+  --with-snmp --with-ais --with-heartbeat --libdir=/usr/lib	  \
+  --with-lcrso-dir=/usr/lib/lcrso
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -47,7 +48,6 @@ endif
 RELEASE := $(shell dpkg-parsechangelog | awk '/^Version: / { print $$2 }')
 UPSTREAM := $(shell echo "$(RELEASE)" | sed 's/:\?\([0-9\.]\+\)-[0-9].*/\1/')
 ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
-LIBDIR := /usr/lib
 
 patch:
 	override_version=$(RELEASE) sh debian/apply
@@ -56,38 +56,17 @@ unpatch:
 	override_version=$(RELEASE) sh debian/apply $(UPSTREAM)
 
 
-build: checkbuild build-stamp
+build: build-stamp
 build-stamp:
 	dh_testdir
-
 	[ -f configure ] || sh autogen.sh
 	if [ -e configure -a ! -x configure ]; then chmod u+x configure; fi
 	if [ -e py-compile -a ! -x py-compile ]; then chmod u+x py-compile; fi
-	mkdir `pwd`/debian/pacemaker-openais-build
-	mkdir `pwd`/debian/pacemaker-heartbeat-build
-	
-	test ! -x ./configure || cd `pwd`/debian/pacemaker-openais-build && \
-		CLFAGS="-Wall -g -I../../../.. -I../../../../include" ../../configure $(cfg) --with-ais --without-heartbeat --libdir=$(LIBDIR)
-	test ! -x ./configure || cd `pwd`/debian/pacemaker-heartbeat-build && \
-		CLFAGS="-Wall -g -I../../../.. -I../../../../include" ../../configure $(cfg) --with-heartbeat --without-ais --libdir=$(LIBDIR)
-
+	# run configure script
+	./configure $(cfg)
 	# set rng compatibility symlinks
 	$(shell cd xml && for a in *-1.0.rng; do ln -s "$$a" `echo "$$a" | sed 's/-1.0//g'`; done)
-
-	# copy testsuite stuff over
-	cp -r tools/shell/regression/testcases/* `pwd`/debian/pacemaker-openais-build/tools/shell/regression/testcases/
-	cp -r tools/shell/regression/testcases/* `pwd`/debian/pacemaker-heartbeat-build/tools/shell/regression/testcases/
-
-	# fix RNG stuff once again
-	sed -i -e 's/cp $$(top_srcdir)/cp ../g' `pwd`/debian/pacemaker-openais-build/xml/Makefile
-	sed -i -e 's/cp $$(top_srcdir)/cp ../g' `pwd`/debian/pacemaker-heartbeat-build/xml/Makefile
-	
-	# fix ais file
-	sed -i -e 's,CFLAGS =,CFLAGS = -I../../../../include,' `pwd`/debian/pacemaker-openais-build/lib/ais/Makefile
-
-	cd `pwd`/debian/pacemaker-openais-build && $(MAKE)
-	cd `pwd`/debian/pacemaker-heartbeat-build && $(MAKE)
-
+	$(MAKE)
 	touch build-stamp
 
 clean:
@@ -115,8 +94,7 @@ install-stamp:
 	dh_testdir
 	dh_testroot
 	dh_installdirs
-	cd `pwd`/debian/pacemaker-openais-build && $(MAKE) install DESTDIR=`pwd`/../tmp-pacemaker-openais docdir=/usr/share/doc/pacemaker-openais
-	cd `pwd`/debian/pacemaker-heartbeat-build && $(MAKE) install DESTDIR=`pwd`/../tmp-pacemaker-heartbeat docdir=/usr/share/doc/pacemaker-heartbeat
+	$(MAKE) install DESTDIR=`pwd`/debian/tmp docdir=/usr/share/doc/pacemaker
 
 binary-indep: build install
 
@@ -124,68 +102,46 @@ binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
 	
-	dh_install -ppacemaker-heartbeat -ppacemaker-heartbeat-dev --sourcedir=debian/tmp-pacemaker-heartbeat --list-missing
-	dh_install -ppacemaker-openais -ppacemaker-openais-dev --sourcedir=debian/tmp-pacemaker-openais --list-missing
+	dh_install --sourcedir=debian/tmp --list-missing
 
-	mkdir -p `pwd`/debian/pacemaker-heartbeat/usr/share/doc/pacemaker-heartbeat/templates/
-	mkdir -p `pwd`/debian/pacemaker-openais/usr/share/doc/pacemaker-openais/templates/
-
-	cp -ax `pwd`/debian/tmp-pacemaker-heartbeat/usr/share/doc/packages/pacemaker/templates/apache `pwd`/debian/pacemaker-heartbeat/usr/share/doc/pacemaker-heartbeat/templates/apache
-	cp -ax `pwd`/debian/tmp-pacemaker-heartbeat/usr/share/doc/packages/pacemaker/templates/virtual-ip `pwd`/debian/pacemaker-heartbeat/usr/share/doc/pacemaker-heartbeat/templates/virtual-ip
-	cp -ax `pwd`/debian/tmp-pacemaker-heartbeat/usr/share/doc/packages/pacemaker/templates/filesystem `pwd`/debian/pacemaker-heartbeat/usr/share/doc/pacemaker-heartbeat/templates/filesystem
-
-	cp -ax `pwd`/debian/tmp-pacemaker-openais/usr/share/doc/packages/pacemaker/templates/apache `pwd`/debian/pacemaker-openais/usr/share/doc/pacemaker-openais/templates/apache
-	cp -ax `pwd`/debian/tmp-pacemaker-openais/usr/share/doc/packages/pacemaker/templates/virtual-ip `pwd`/debian/pacemaker-openais/usr/share/doc/pacemaker-openais/templates/virtual-ip
-	cp -ax `pwd`/debian/tmp-pacemaker-openais/usr/share/doc/packages/pacemaker/templates/filesystem `pwd`/debian/pacemaker-openais/usr/share/doc/pacemaker-openais/templates/filesystem
+	mkdir -p `pwd`/debian/pacemaker/usr/share/doc/pacemaker/templates/
 
 	# make non-scripts non-executable
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/crm-transitional.dtd
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/resources-1.0.rng
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/nvset-1.0.rng
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/upgrade06.xsl
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/constraints-1.0.rng
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/shelltest/testcases/xmlonly.sh
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/shelltest/testcases/confbasic-xml.filter
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/pacemaker.rng
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/pacemaker-1.0.rng
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/score.rng
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/crm.dtd
-	chmod -x `pwd`/debian/pacemaker-{openais,heartbeat}/usr/share/pacemaker/rule-1.0.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/crm-transitional.dtd
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/resources-1.0.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/nvset-1.0.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/upgrade06.xsl
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/constraints-1.0.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/shelltest/testcases/xmlonly.sh
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/shelltest/testcases/confbasic-xml.filter
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/pacemaker.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/pacemaker-1.0.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/score.rng
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/crm.dtd
+	-chmod -x `pwd`/debian/pacemaker/usr/share/pacemaker/rule-1.0.rng
 
 	# delete redundant COPYING files
-	rm -rf `pwd`/debian/pacemaker-heartbeat/usr/share/doc/pacemaker-heartbeat/COPYING.LGPL.gz
-	rm -rf `pwd`/debian/pacemaker-heartbeat/usr/share/doc/pacemaker-heartbeat/COPYING.gz
-	rm -rf `pwd`/debian/pacemaker-openais/usr/share/doc/pacemaker-openais/COPYING.LGPL.gz
-	rm -rf `pwd`/debian/pacemaker-openais/usr/share/doc/pacemaker-openais/COPYING.gz
+	rm -rf `pwd`/debian/pacemaker/usr/share/doc/pacemaker/COPYING.LGPL.gz
+	rm -rf `pwd`/debian/pacemaker/usr/share/doc/pacemaker/COPYING.gz
 
 	# create special directory
-	mkdir -p `pwd`/debian/pacemaker-openais/var/lib/pengine
-	mkdir -p `pwd`/debian/pacemaker-heartbeat/var/lib/pengine
-	mkdir -p `pwd`/debian/pacemaker-openais/var/lib/heartbeat/pengine
-	mkdir -p `pwd`/debian/pacemaker-heartbeat/var/lib/heartbeat/pengine
+	mkdir -p `pwd`/debian/pacemaker/var/lib/pengine
+	mkdir -p `pwd`/debian/pacemaker/var/lib/heartbeat/pengine
 	
 	dh_installdebconf -a
 	dh_installdocs -a
 	dh_installexamples -a
-#	dh_installmenu -a
-#	dh_installemacsen -a
-#	dh_installpam -a
 	dh_installinit -a -n -u 'defaults 20 32'
-#	dh_installcron -a
 	dh_installman -a
-#	dh_installinfo -a
-#	dh_undocumented -a
-#	dh_installchangelogs -a `pwd`/doc/ChangeLog
 	dh_installchangelogs
 	dh_link -a
 	dh_strip -a
 
 	# make the pacemaker shlib non-executable
-	chmod -x `pwd`/debian/pacemaker-openais/usr/lib/openais/lcrso/pacemaker.lcrso
+	chmod -x `pwd`/debian/pacemaker/usr/lib/lcrso/pacemaker.lcrso
 
 	dh_compress -a
 	dh_fixperms -a
-#	dh_suidregister -a
 	dh_makeshlibs -a -V
 	dh_installdeb -a
 	dh_perl -a
@@ -198,9 +154,5 @@ binary-arch: build install
 
 binary: binary-indep binary-arch
 
-checkbuild:
-	chmod u+x ./debian/dpkg-checkbuild
-	./debian/dpkg-checkbuild debian/control
-
-.PHONY: build clean binary binary-indep binary-arch install checkbuild \
+.PHONY: build clean binary binary-indep binary-arch install \
 	patch unpatch
