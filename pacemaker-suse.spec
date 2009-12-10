@@ -27,7 +27,7 @@ Release:	1%{?dist}
 License:        GPL v2 or later; LGPL v2.1 or later
 Url:            http://www.clusterlabs.org
 Group:		Productivity/Clustering/HA
-Source:         pacemaker.tar.gz
+Source:         pacemaker.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 AutoReqProv:    on
 Conflicts:      heartbeat < 2.99
