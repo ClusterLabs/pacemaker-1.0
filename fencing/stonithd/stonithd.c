@@ -2766,7 +2766,7 @@ can_st_manage_node(stonith_rsc_t *srsc, const char *node_name)
 	for(this=srsc->node_list; *this; ++this) {
 		stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
 			"can_stonith: host=%s.", *this);
-		if ( strncmp(node_name, *this, MAXCMP) == 0 ) {
+		if ( strncasecmp(node_name, *this, MAXCMP) == 0 ) {
 			stonithd_log2(LOG_DEBUG, "stonith type found:"
 				" %s", srsc->stonith_obj->stype);
 			return TRUE;
@@ -3430,7 +3430,7 @@ hostlist2shmem(char *rsc_id, int shmid,char **hostlist,int maxlist,int is_lastga
 	}
 	q = s;
 	for( h = hostlist; *h; h++ ) {
-		if( !TEST && !is_lastgasp && !strcmp(*h, local_nodename) ) {
+		if( !TEST && !is_lastgasp && !strcasecmp(*h, local_nodename) ) {
 			stonithd_log(LOG_DEBUG,"remove us (%s) from the host list for %s"
 				, *h, rsc_id);
 			continue; /* we can't reset ourselves */
