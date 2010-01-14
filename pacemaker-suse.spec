@@ -22,7 +22,7 @@
 
 Name:           pacemaker
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
-Version:        1.0.6
+Version:        1.0.7
 Release:	1%{?dist}
 License:        GPL v2 or later; LGPL v2.1 or later
 Url:            http://www.clusterlabs.org
