@@ -957,6 +957,7 @@ class StandbyTest(CTSTest):
             return self.failure("can't set node %s to standby mode" % node)
 
         self.log_mark("standby:on")
+        time.sleep(1)  # Allow time for the update to be applied and cause something
         self.CM.cluster_stable()
 
         status = self.CM.StandbyStatus(node)
@@ -1728,6 +1729,7 @@ class Reattach(CTSTest):
             "You may ignore this error if it is unmanaged.",
             "pingd: .*ERROR: send_ipc_message:",
             "pingd: .*ERROR: send_update:",
+            "lrmd: .*ERROR: notify_client:",
             ]
 
     def is_applicable(self):
@@ -2391,3 +2393,5 @@ def BenchTestList(cm, audits):
         if test.benchmark:
             result.append(test)
     return result
+
+# vim:ts=4:sw=4:et:
