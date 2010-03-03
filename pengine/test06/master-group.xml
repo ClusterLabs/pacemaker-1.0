@@ -83,11 +83,11 @@
          </rule>
        </rsc_location>
        <rsc_location id="rsc_location_group_0" rsc="ms-sf">
-         <rule id="prefered_location_group_0" role="Master" score="100">
-           <expression id="prefered_location_group_0_expr" attribute="#uname" operation="eq" value="rh44-1"/>
+         <rule id="preferred_location_group_0" role="Master" score="100">
+           <expression id="preferred_location_group_0_expr" attribute="#uname" operation="eq" value="rh44-1"/>
          </rule>
-         <rule id="prefered_location_group_1" role="Master" score="50">
-           <expression id="prefered_location_group_1_expr" attribute="#uname" operation="eq" value="rh44-2"/>
+         <rule id="preferred_location_group_1" role="Master" score="50">
+           <expression id="preferred_location_group_1_expr" attribute="#uname" operation="eq" value="rh44-2"/>
          </rule>
        </rsc_location>
      </constraints>

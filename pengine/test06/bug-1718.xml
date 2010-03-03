@@ -78,7 +78,7 @@
      </resources>
      <constraints>
        <rsc_location id="Web_Place" rsc="Web_Group">
-         <rule id="prefered_Web_Place" score="100">
+         <rule id="preferred_Web_Place" score="100">
            <expression attribute="#uname" id="f0c82530-5984-42f8-ac40-8ce32048f2f9" operation="eq" value="defiant.ds9"/>
          </rule>
        </rsc_location>

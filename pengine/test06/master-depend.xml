@@ -140,8 +140,8 @@
      </resources>
      <constraints>
        <rsc_location id="drbd0_location" rsc="drbd">
-         <rule id="drbd0_prefered_location" score="1">
-           <expression id="drbd0_prefered_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
+         <rule id="drbd0_preferred_location" score="1">
+           <expression id="drbd0_preferred_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
          </rule>
        </rsc_location>
        <rsc_order id="drbd_before_clvmd" from="clvmd_clone" action="start" to="drbd" to_action="promote"/>
@@ -150,26 +150,26 @@
        <rsc_order id="cman_before_clvmd" from="clvmd_clone" action="start" to="cman_clone" to_action="start"/>
        <rsc_colocation id="clvmd_on_cman" to="cman_clone" to_role="Started" from="clvmd_clone" score="INFINITY"/>
        <rsc_location id="vmnci36_location" rsc="vmnci36">
-         <rule id="vmnci36_prefered_location" score="10">
-           <expression id="vmnci36_prefered_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
+         <rule id="vmnci36_preferred_location" score="10">
+           <expression id="vmnci36_preferred_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
          </rule>
        </rsc_location>
        <rsc_order id="clvmd_before_vmnci36" from="vmnci36" action="start" to="clvmd_clone" to_action="start"/>
        <rsc_colocation id="vmnci36_on_clvmd" to="clvmd_clone" to_role="Started" from="vmnci36" score="INFINITY"/>
        <rsc_location id="vmnci37_location" rsc="vmnci37">
-         <rule id="vmnci37_prefered_location" score="10">
-           <expression id="vmnci37_prefered_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
+         <rule id="vmnci37_preferred_location" score="10">
+           <expression id="vmnci37_preferred_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
          </rule>
        </rsc_location>
        <rsc_location id="vmnci38_location" rsc="vmnci38">
-         <rule id="vmnci38_prefered_location" score="10">
-           <expression id="vmnci38_prefered_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
+         <rule id="vmnci38_preferred_location" score="10">
+           <expression id="vmnci38_preferred_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
          </rule>
        </rsc_location>
        <rsc_order id="clvmd_before_vmnci38" from="vmnci38" action="start" to="clvmd_clone" to_action="start"/>
        <rsc_location id="vmnci55_location" rsc="vmnci55">
-         <rule id="vmnci55_prefered_location" score="10">
-           <expression id="vmnci55_prefered_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
+         <rule id="vmnci55_preferred_location" score="10">
+           <expression id="vmnci55_preferred_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
          </rule>
        </rsc_location>
        <rsc_order id="clvmd_before_vmnci55" from="vmnci55" action="start" to="clvmd_clone" to_action="start"/>
