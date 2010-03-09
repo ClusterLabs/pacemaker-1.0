@@ -2978,7 +2978,7 @@ has_this_callid(gpointer key, gpointer value, gpointer user_data)
 	}
 	
 	if (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ ) {
-		stonithd_log(LOG_WARNING, "%s: scenario %s could be unexpected",
+		stonithd_log(LOG_WARNING, "%s: scenario %u could be unexpected",
 		__FUNCTION__, op->scenario);
 		return;
 	}
