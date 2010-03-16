@@ -92,6 +92,7 @@ xml/crm.dtd
 # Project build targets
 cib/cib
 cib/cibmon
+cib/cibpipe
 crm.dtd
 crmd/atest
 crmd/crmd
@@ -128,9 +129,13 @@ tools/hb2openais.sh
 tools/iso8601
 tools/pingd
 tools/regression.out
-tools/shell/regression/lrmregtest-lsb
-tools/shell/regression/regression.sh
-tools/shell/regression/testcases/confbasic-xml.filter
+shell/modules/help.py
+shell/modules/ra.py
+shell/modules/ui.py
+shell/modules/vars.py
+shell/regression/lrmregtest-lsb
+shell/regression/regression.sh
+shell/regression/testcases/confbasic-xml.filter
 doc/ChangeLog
 doc/GettingStarted.txt
 doc/HardwareGuide.txt
@@ -161,6 +166,9 @@ GTAGS
 \#*
 .changes
 pacemaker.tar.gz
+doc/Pacemaker_Explained
+mock
+*.src.rpm
 
 # Entries better done as regexp's to avoid matching too broadly
 syntax: regexp
