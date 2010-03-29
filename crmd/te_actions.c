@@ -162,7 +162,11 @@ te_fence_node(crm_graph_t *graph, crm_action_t *action)
 		crm_err("Cannot fence %s: stonithd_node_fence() call failed ",
 			target);
 	}
-	
+
+	crm_free(st_op->node_name);
+	crm_free(st_op->node_uuid);
+	crm_free(st_op->private_data);
+	crm_free(st_op);
 	return TRUE;
 }
 
