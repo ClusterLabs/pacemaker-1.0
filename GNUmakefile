@@ -46,7 +46,7 @@ TAG    ?= tip
 export:
 	rm -f $(TARFILE)
 	hg archive -t tbz2 -r $(TAG) $(TARFILE)
-	echo `date`: Rebuilt $(TARFILE)
+	echo `date`: Rebuilt $(TARFILE) from $(TAG)
 
 pacemaker-fedora.spec: pacemaker.spec
 	cp $(PACKAGE).spec $(PACKAGE)-$(DISTRO).spec
