@@ -516,3 +516,7 @@ group_merge_weights(
     clear_bit(rsc->flags, pe_rsc_merging);
     return nodes;
 }
+
+void group_append_meta(resource_t *rsc, xmlNode *xml)
+{
+}
