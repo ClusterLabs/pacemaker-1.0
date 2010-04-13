@@ -1607,7 +1607,7 @@ static void handle_rsc_op(xmlNode *rsc_op)
 			
     if(parse_op_key(id, &rsc, &task, &interval) == FALSE) {
 	crm_err("Invalid event detected for %s", id);
-	return;
+	goto bail;
     }
 
     while(n != NULL && safe_str_neq(XML_CIB_TAG_STATE, TYPE(n))) {
@@ -1620,7 +1620,7 @@ static void handle_rsc_op(xmlNode *rsc_op)
     }
     if(node == NULL) {
 	crm_err("No node detected for event %s (%s)", magic, id);
-	return;
+	goto bail;
     }
 
     /* look up where we expected it to be? */
@@ -1649,6 +1649,10 @@ static void handle_rsc_op(xmlNode *rsc_op)
     if(notify && external_agent) {
 	send_custom_trap(node, rsc, task, target_rc, rc, status, desc);
     }
+  bail:
+    crm_free(update_te_uuid);
+    crm_free(rsc);
+    crm_free(task);
 }
 
 void
@@ -1714,6 +1718,8 @@ crm_diff_update(const char *event, xmlNode *msg)
 		xmlNode *rsc_op = getXpathResult(xpathObj, lpc);
 		handle_rsc_op(rsc_op);
 	    }
+	}
+	if (xpathObj) {
 	    xmlXPathFreeObject(xpathObj);
 	}
     }

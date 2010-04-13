@@ -2,7 +2,7 @@
 %global uname hacluster
 %global pcmk_docdir %{_docdir}/%{name}
 
-%global specversion 3
+%global specversion 4
 #global upstream_version ee19d8e83c2a
 %global upstream_prefix pacemaker
 
@@ -52,6 +52,7 @@ Requires(pre):	cluster-glue
 Requires:	resource-agents
 Requires:	python >= 2.4
 Conflicts:      heartbeat < 2.99
+Requires:	pacemaker-libs = %{version}-%{release}
 
 %if 0%{?fedora} || 0%{?centos} > 4 || 0%{?rhel} > 4
 Requires:       perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
@@ -111,7 +112,6 @@ Available rpmbuild rebuild options:
 License:	GPLv2+ and LGPLv2+
 Summary:	Libraries used by the Pacemaker cluster resource manager and its clients
 Group:		System Environment/Daemons
-Requires:	%{name} = %{version}-%{release}
 
 %description -n pacemaker-libs
 Pacemaker is an advanced, scalable High-Availability cluster resource
@@ -277,7 +277,10 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
-* Thu Mar 25 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-2
+* Thu Apr 08 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-4
+- Rebuild with for corosync 1.2.1
+
+* Wed Apr 07 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-3
 - Rebuild with correct 1.0.8 tarball
 
 * Thu Mar 25 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-2
