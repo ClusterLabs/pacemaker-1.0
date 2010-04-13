@@ -4,8 +4,8 @@
 heartbeat
 .INP: providers Dummy
 heartbeat pacemaker
-.INP: info IPaddr ocf
-Manages virtual IPv4 addresses (ocf:heartbeat:IPaddr)
+.INP: info IPaddr
+Manages virtual IPv4 addresses (portable version) (ocf:heartbeat:IPaddr)
 
 This script manages IP alias IP addresses
 It can add an IP alias, or remove one.
@@ -25,6 +25,16 @@ nic (string, [eth0]): Network interface
     
     Do NOT specify an alias interface in the form eth0:1 or anything here;
     rather, specify the base interface only.
+    
+    Prerequisite:
+    
+    There must be at least one static IP address, which is not managed by
+    the cluster, assigned to the network interface.
+    
+    If you can not assign any static IP address on the interface,
+    modify this kernel parameter:
+    sysctl -w net.ipv4.conf.all.promote_secondaries=1
+    (or per device)
 
 cidr_netmask (string): Netmask
     The netmask for the interface in CIDR format. (ie, 24), or in
@@ -66,14 +76,15 @@ ARP_NETMASK (string, [ffffffffffff]): netmask for ARP
 
 Operations' defaults (advisory minimum):
 
-    start         timeout=90
-    stop          timeout=100
-    monitor_0     interval=5s timeout=20s start-delay=0
-.INP: info external/ssh stonith
-ssh STONITH external device (stonith:external/ssh)
+    start         timeout=20s
+    stop          timeout=20s
+    monitor_0     interval=5s timeout=20s
+.INP: info stonith:external/ssh
+ssh STONITH device (stonith:external/ssh)
 
 ssh-based Linux host reset
 Fine for testing, but not suitable for production!
+Only reboot action supported, no poweroff, and, surprisingly enough, no poweron.
 
 Parameters (* denotes required, [] the default):
 
@@ -95,20 +106,7 @@ priority (integer, [0]):
 
 Operations' defaults (advisory minimum):
 
-    start         timeout=15
+    start         timeout=60
     stop          timeout=15
-    status        timeout=15
-    monitor_0     interval=15 timeout=15 start-delay=15
-.INP: info lrmregtest lsb
-lsb:lrmregtest
-
-lrmregtest
-
-Operations' defaults (advisory minimum):
-
-    start         timeout=15
-    stop          timeout=15
-    status        timeout=15
-    restart       timeout=15
-    force-reload  timeout=15
-    monitor_0     interval=15 timeout=15 start-delay=15
+    status        timeout=60
+    monitor_0     interval=3600 timeout=60
