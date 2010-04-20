@@ -2,7 +2,7 @@
 %global uname hacluster
 %global pcmk_docdir %{_docdir}/%{name}
 
-%global specversion 4
+%global specversion 5
 #global upstream_version ee19d8e83c2a
 %global upstream_prefix pacemaker
 
@@ -277,8 +277,14 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
+* Thu Apr 15 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-6
+- Rebuild for glue 1.0.5
+
+* Thu Apr 15 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-5
+- Rebuild for glue 1.0.4, agents 1.0.3, and heartbeat 3.0.3
+
 * Thu Apr 08 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-4
-- Rebuild with for corosync 1.2.1
+- Rebuild for corosync 1.2.1
 
 * Wed Apr 07 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-3
 - Rebuild with correct 1.0.8 tarball
