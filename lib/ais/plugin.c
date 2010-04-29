@@ -348,21 +348,19 @@ static void process_ais_conf(void)
 	    ais_err("Logging to a file requested but no log file specified");
 
 	} else {
-	    struct passwd *superuser = getpwnam("root");
-	    struct passwd *user = getpwnam(CRM_DAEMON_USER);
+	    uid_t log_user = -1;
+	    gid_t log_group = -1;
 	    
-	    AIS_CHECK(user != NULL,
-		      ais_err("Cluster user %s does not exist", CRM_DAEMON_USER));
-	    AIS_CHECK(superuser != NULL,
-		      ais_err("Superuser %s does not exist", "root"));
 	    pcmk_env.logfile = value;
+	    pcmk_user_lookup("root", &log_user, NULL);
+	    pcmk_user_lookup(CRM_DAEMON_USER, NULL, &log_group);
 
-	    if(superuser && user) {
+	    if(log_user >= 0 && log_group >= 0) {
 		/* Ensure the file has the correct permissions */
 		FILE *logfile = fopen(value, "a");
 		int logfd = fileno(logfile);
 		
-		fchown(logfd, superuser->pw_uid, user->pw_gid);
+		fchown(logfd, log_user, log_group);
 		fchmod(logfd, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 		
 		fprintf(logfile, "Set r/w permissions for "CRM_DAEMON_USER"\n");
@@ -370,6 +368,9 @@ static void process_ais_conf(void)
 		fsync(fileno(logfile));
 		fclose(logfile);
 		any_log = TRUE;
+
+	    } else {
+		ais_err("Couldn't setup correct logfile permissions, some logs may be lost");
 	    }
 	}
     }
@@ -549,7 +550,9 @@ int pcmk_startup(struct corosync_api_v1 *init_with)
     struct utsname us;
     struct rlimit cores;
     static int max = SIZEOF(pcmk_children);
-    struct passwd *pwentry = getpwnam(CRM_DAEMON_USER);
+
+    uid_t pcmk_uid = 0;
+    gid_t pcmk_gid = 0;
 
     pcmk_api = init_with;
 
@@ -589,18 +592,24 @@ int pcmk_startup(struct corosync_api_v1 *init_with)
 	
     } else {
 	ais_info("Maximum core file size is: %lu", cores.rlim_max);
+#if 0
+	/* system() is not thread-safe, can't call from here
+	 * Actually, its a pretty hacky way to try and achieve this anyway
+	 */
 	if(system("echo 1 > /proc/sys/kernel/core_uses_pid") != 0) {
 	    ais_perror("Could not enable /proc/sys/kernel/core_uses_pid");
 	}
+#endif
     }
     
-    AIS_CHECK(pwentry != NULL,
-	      ais_err("Cluster user %s does not exist", CRM_DAEMON_USER);
-	      return TRUE);
+    if(pcmk_user_lookup(CRM_DAEMON_USER, &pcmk_uid, &pcmk_gid) < 0) {
+	ais_err("Cluster user %s does not exist, aborting Pacemaker startup", CRM_DAEMON_USER);
+	return TRUE;
+    }
     
     mkdir(CRM_STATE_DIR, 0750);
-    chown(CRM_STATE_DIR, pwentry->pw_uid, pwentry->pw_gid);
-
+    chown(CRM_STATE_DIR, pcmk_uid, pcmk_gid);
+    
     /* Used by stonithd */
     build_path(HA_STATE_DIR"/heartbeat", 0755); 
 
