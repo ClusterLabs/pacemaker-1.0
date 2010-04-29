@@ -522,6 +522,8 @@ static uint32_t pcmk_update_nodeid(void)
     return local_nodeid;
 }
 
+#define PW_BUFFER_LEN 500
+
 int pcmk_startup(struct corosync_api_v1 *init_with)
 {
     int rc = 0;
@@ -530,7 +532,10 @@ int pcmk_startup(struct corosync_api_v1 *init_with)
     struct utsname us;
     struct rlimit cores;
     static int max = SIZEOF(pcmk_children);
-    struct passwd *pwentry = getpwnam(CRM_DAEMON_USER);
+
+    char *buffer = NULL;
+    struct passwd pwd;
+    struct passwd *pwentry = NULL;
 
     pcmk_api = init_with;
 
@@ -575,12 +580,15 @@ int pcmk_startup(struct corosync_api_v1 *init_with)
 	}
     }
     
+    ais_malloc0(buffer, PW_BUFFER_LEN);
+    getpwnam_r(CRM_DAEMON_USER, &pwd, buffer, PW_BUFFER_LEN, &pwentry);
     AIS_CHECK(pwentry != NULL,
 	      ais_err("Cluster user %s does not exist", CRM_DAEMON_USER);
 	      return TRUE);
     
     mkdir(CRM_STATE_DIR, 0750);
     chown(CRM_STATE_DIR, pwentry->pw_uid, pwentry->pw_gid);
+    ais_free(buffer);
     
     mkdir(HA_STATE_DIR"/heartbeat", 0755); /* Used by RAs - Leave owned by root */
     mkdir(HA_STATE_DIR"/heartbeat/rsctmp", 0755); /* Used by RAs - Leave owned by root */
