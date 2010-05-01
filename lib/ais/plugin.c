@@ -161,6 +161,7 @@ static uint32_t get_process_list(void)
 	    procs |= pcmk_children[lpc].flag;
 	}
     }
+    return procs;
 }
 
 
