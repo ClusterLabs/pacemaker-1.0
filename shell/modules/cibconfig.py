@@ -992,8 +992,11 @@ class CibPrimitive(CibObject):
         if not self.node:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
+        rc3 = sanity_check_meta(self.obj_id,self.node,vars.rsc_meta_attributes)
         ra = get_ra(self.node)
         if not ra.mk_ra_node():  # no RA found?
+            if cib_factory.is_asymm_cluster():
+                return rc3
             ra.error("no such resource agent")
             return user_prefs.get_check_rc()
         params = []
@@ -1015,7 +1018,6 @@ class CibPrimitive(CibObject):
                             actions[op] = pl
         default_timeout = get_default_timeout()
         rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
-        rc3 = sanity_check_meta(self.obj_id,self.node,vars.rsc_meta_attributes)
         return rc1 | rc2 | rc3
 
 class CibContainer(CibObject):
@@ -1856,6 +1858,9 @@ class CibFactory(Singleton):
         Get the value of the attribute from op_defaults.
         '''
         return self._get_attr_value("op_defaults",attr)
+    def is_asymm_cluster(self):
+        symm = self.get_property("symmetric-cluster")
+        return symm and symm != "true"
     def new_object(self,obj_type,obj_id):
         "Create a new object of type obj_type."
         if id_store.id_in_use(obj_id):
