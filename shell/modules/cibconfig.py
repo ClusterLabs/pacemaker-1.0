@@ -901,6 +901,12 @@ class CibNode(CibObject):
         remove_id_used_attributes(cib_factory.topnode[cib_object_map[self.xml_obj_type][2]])
         return headnode
 
+def get_ra(node):
+    ra_type = node.getAttribute("type")
+    ra_class = node.getAttribute("class")
+    ra_provider = node.getAttribute("provider")
+    return RAInfo(ra_class,ra_type,ra_provider)
+
 class CibPrimitive(CibObject):
     '''
     Primitives.
@@ -986,10 +992,7 @@ class CibPrimitive(CibObject):
         if not self.node:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
-        ra_type = self.node.getAttribute("type")
-        ra_class = self.node.getAttribute("class")
-        ra_provider = self.node.getAttribute("provider")
-        ra = RAInfo(ra_class,ra_type,ra_provider)
+        ra = get_ra(self.node)
         if not ra.mk_ra_node():  # no RA found?
             ra.error("no such resource agent")
             return user_prefs.get_check_rc()
