@@ -710,6 +710,10 @@ unpack_order_set(xmlNode *set, int score,
     *end = get_pseudo_op(end_id, data_set);
     *begin = get_pseudo_op(begin_id, data_set);
     
+    crm_free(pseudo_id);
+    crm_free(begin_id);
+    crm_free(end_id);
+
     if(score_s) {
 	local_score = char2score(score_s);
     }
@@ -757,6 +761,10 @@ unpack_order_set(xmlNode *set, int score,
     *inv_end = get_pseudo_op(end_id, data_set);
     *inv_begin = get_pseudo_op(begin_id, data_set);
 
+    crm_free(pseudo_id);
+    crm_free(begin_id);
+    crm_free(end_id);
+
     flags = get_flags(id, local_score, action, action);
     
     xml_child_iter_filter(
@@ -782,7 +790,6 @@ unpack_order_set(xmlNode *set, int score,
 	);
 
   done:
-    crm_free(pseudo_id);
     return TRUE;
 }
 
