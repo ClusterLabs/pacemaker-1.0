@@ -855,6 +855,8 @@ class CibObject(object):
             return False
         if args[0] == "changed":
             return self.updated or self.origin == "user"
+        if args[0].startswith("type:"):
+            return self.obj_type == args[0][5:]
         return self.obj_id in args
 
 def mk_cli_list(cli):
@@ -900,6 +902,12 @@ class CibNode(CibObject):
             headnode.appendChild(n)
         remove_id_used_attributes(cib_factory.topnode[cib_object_map[self.xml_obj_type][2]])
         return headnode
+
+def get_ra(node):
+    ra_type = node.getAttribute("type")
+    ra_class = node.getAttribute("class")
+    ra_provider = node.getAttribute("provider")
+    return RAInfo(ra_class,ra_type,ra_provider)
 
 class CibPrimitive(CibObject):
     '''
@@ -986,11 +994,11 @@ class CibPrimitive(CibObject):
         if not self.node:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
-        ra_type = self.node.getAttribute("type")
-        ra_class = self.node.getAttribute("class")
-        ra_provider = self.node.getAttribute("provider")
-        ra = RAInfo(ra_class,ra_type,ra_provider)
+        rc3 = sanity_check_meta(self.obj_id,self.node,vars.rsc_meta_attributes)
+        ra = get_ra(self.node)
         if not ra.mk_ra_node():  # no RA found?
+            if cib_factory.is_asymm_cluster():
+                return rc3
             ra.error("no such resource agent")
             return user_prefs.get_check_rc()
         params = []
@@ -1012,7 +1020,6 @@ class CibPrimitive(CibObject):
                             actions[op] = pl
         default_timeout = get_default_timeout()
         rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
-        rc3 = sanity_check_meta(self.obj_id,self.node,vars.rsc_meta_attributes)
         return rc1 | rc2 | rc3
 
 class CibContainer(CibObject):
@@ -1853,6 +1860,9 @@ class CibFactory(Singleton):
         Get the value of the attribute from op_defaults.
         '''
         return self._get_attr_value("op_defaults",attr)
+    def is_asymm_cluster(self):
+        symm = self.get_property("symmetric-cluster")
+        return symm and symm != "true"
     def new_object(self,obj_type,obj_id):
         "Create a new object of type obj_type."
         if id_store.id_in_use(obj_id):
@@ -1876,6 +1886,8 @@ class CibFactory(Singleton):
                 obj_cli_warn(obj.obj_id)
             obj_list.append(obj)
         return obj_list
+    def is_cib_empty(self):
+        return not self.mkobj_list("cli","type:primitive")
     def has_cib_changed(self):
         return self.mkobj_list("xml","changed") or self.remove_queue
     def verify_constraints(self,node):

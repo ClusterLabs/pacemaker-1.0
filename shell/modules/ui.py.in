@@ -938,7 +938,7 @@ class NodeMgmt(UserInterface):
     node_standby = "crm_standby -N '%s' -v '%s' %s"
     node_delete = "cibadmin -D -o nodes -X '<node uname=\"%s\"/>'"
     node_delete_status = "cibadmin -D -o status -X '<node_state uname=\"%s\"/>'"
-    hb_delnode = "@libdir@/heartbeat/hb_delnode '%s'"
+    hb_delnode = "@datadir@/heartbeat/hb_delnode '%s'"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -U '%s' -n terminate -v true"
     dc = "crmadmin -D"
@@ -1387,7 +1387,8 @@ class CibConfig(UserInterface):
             common_info("try changing something first")
             return
         rc1 = cib_factory.is_current_cib_equal()
-        rc2 = self._verify(mkset_obj("xml","changed"),mkset_obj("xml"))
+        rc2 = cib_factory.is_cib_empty() or \
+            self._verify(mkset_obj("xml","changed"),mkset_obj("xml"))
         if rc1 and rc2:
             return cib_factory.commit()
         if force or user_prefs.get_force():
