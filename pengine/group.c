@@ -411,6 +411,7 @@ void group_rsc_order_rh(
 	    char *task_s = NULL;
 	    int interval = 0;
 	    enum action_tasks task = 0;
+	    enum rsc_role_e next_role = minimum_resource_state(rsc, FALSE);
 	    
 	    parse_op_key(order->lh_action_task, &tmp, &task_s, &interval);
 	    task = text2task(task_s);
@@ -437,6 +438,12 @@ void group_rsc_order_rh(
 		case action_promoted:
 		    order->type |= pe_order_complex_right;
 		    break;
+	    }
+
+	    if(next_role < RSC_ROLE_STARTED
+	       && task == stop_rsc
+	       && next_role != rsc->fns->state(rsc, FALSE) /* Group is partially up */) {
+		native_rsc_order_rh(lh_action, group_data->last_child, order);	    
 	    }
 	}
 	
