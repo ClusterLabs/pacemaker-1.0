@@ -75,6 +75,9 @@
     </action_set>
     <inputs>
       <trigger>
+        <pseudo_event id="6" operation="probe_complete" operation_key="probe_complete"/>
+      </trigger>
+      <trigger>
         <pseudo_event id="33" operation="stop" operation_key="group_webservice:2_stop_0"/>
       </trigger>
     </inputs>
