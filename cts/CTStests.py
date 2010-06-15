@@ -428,13 +428,17 @@ class StonithdTest(CTSTest):
         if not ret:
             return self.failure("Setup failed")
 
+        is_dc = self.CM.is_node_dc(node)
+
         watchpats = []
-        watchpats.append("Forcing node %s to be terminated" % node)
         watchpats.append("Scheduling Node %s for STONITH" % node)
         watchpats.append("Executing .* fencing operation")
         watchpats.append("sending fencing op RESET for %s" % node)
 
-        if not self.CM.is_node_dc(node):
+        if self.CM.Env["LogWatcher"] != "remote" or not is_dc:
+            watchpats.append("Forcing node %s to be terminated" % node)
+
+        if not is_dc:
             # Won't be found if the DC is shot (and there's no equivalent message from stonithd)
             watchpats.append("tengine_stonith_callback: .*result=0")
 
