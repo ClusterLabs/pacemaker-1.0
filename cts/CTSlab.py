@@ -24,16 +24,24 @@ Licensed under the GNU GPL.
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 from UserDict import UserDict
-import sys, time, types, string, syslog, random, os, string, signal, traceback
+import sys, types, string, string, signal, os
 
-from CTS          import *
-from CTSvars      import *
-from CTSscenarios import *
-from CTSaudits    import AuditList
-from CTStests     import BSC_AddResource,TestList
+pdir=os.path.dirname(sys.path[0])
+sys.path.insert(0, pdir) # So that things work from the source directory
 
-from CM_ais import *
-from CM_lha import crm_lha
+try:
+    from CTSvars    import *
+    from CM_ais     import *
+    from CM_lha     import crm_lha
+    from CTSaudits  import AuditList
+    from CTStests   import TestList
+    from CTSscenarios import *
+
+except ImportError:
+    sys.stderr.write("abort: couldn't find cts libraries in [%s]\n" %
+                     ' '.join(sys.path))
+    sys.stderr.write("(check your install and PYTHONPATH)\n")
+    sys.exit(-1)
 
 cm = None
 Tests = []
@@ -73,13 +81,14 @@ class LabEnvironment(CtsLab):
         self["Schema"] = "pacemaker-1.0"
         self["Stack"] = "openais"
         self["stonith-type"] = "external/ssh"
-        self["stonith-params"] = "hostlist=all"
-        self["at-boot"] = 1  # Does the cluster software start automatically when the node boot 
+        self["stonith-params"] = "hostlist=all,livedangerously=yes"
+        self["at-boot"] = 1  # Does the cluster software start automatically when the node boots 
         self["logger"] = ([StdErrLog(self)])
         self["loop-minutes"] = 60
         self["valgrind-prefix"] = None
-        self["valgrind-procs"] = "cib crmd attrd pengine"
+        self["valgrind-procs"] = "cib crmd attrd pengine stonith-ng"
         self["valgrind-opts"] = """--leak-check=full --show-reachable=yes --trace-children=no --num-callers=25 --gen-suppressions=all --suppressions="""+CTSvars.CTS_home+"""/cts.supp"""
+        #self["valgrind-opts"] = """--trace-children=no --num-callers=25 --gen-suppressions=all --suppressions="""+CTSvars.CTS_home+"""/cts.supp"""
 
         self["experimental-tests"] = 0
         self["valgrind-tests"] = 0
@@ -103,9 +112,9 @@ def usage(arg, status=1):
     print "\t [--benchmark],             add the timing information" 
     print "\t "
     print "Options for release testing: "  
-    print "\t [--populate-resources | -r]" 
-    print "\t [--schema (pacemaker-0.6|pacemaker-1.0|hae)] "
-    print "\t [--test-ip-base ip]" 
+    print "\t [--clobber-cib | -c ]       Erase any existing configuration"
+    print "\t [--populate-resources | -r] Generate a sample configuration"
+    print "\t [--test-ip-base ip]         Offset for generated IP address resources"
     print "\t "
     print "Additional (less common) options: "  
     print "\t [--trunc (truncate logfile before starting)]" 
@@ -312,6 +321,13 @@ if __name__ == '__main__':
        elif args[i] == "--no-loop-tests":
            Environment["loop-tests"] = 0
 
+       elif args[i] == "--loop-minutes":
+           skipthis=1
+           try:
+               Environment["loop-minutes"]=int(args[i+1])
+           except ValueError:
+               usage(args[i])
+
        elif args[i] == "--no-unsafe-tests":
            Environment["unsafe-tests"] = 0
 
@@ -329,7 +345,6 @@ if __name__ == '__main__':
            except ValueError:
                usage(args[i])
 
-    Environment["loop-minutes"] = int(Environment["loop-minutes"])
     if Environment["DoBSC"]:
         NumIter = 2
         LimitNodes = 1

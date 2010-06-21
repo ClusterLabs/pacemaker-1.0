@@ -332,7 +332,7 @@ class CIB10(CibBase):
 </cib>'''
 
     def _create(self, command):
-        fixed = "CIB_file="+self.cib_tmpfile+" crm configure " + command 
+        fixed = "HOME=/root CIB_file="+self.cib_tmpfile+" crm --force configure " + command 
         rc = self.CM.rsh(self.target, fixed)
         if rc != 0:
             self.CM.log("Configure call failed: "+fixed)
@@ -340,7 +340,7 @@ class CIB10(CibBase):
 
     def _show(self, command=""):
         output = ""
-        (rc, result) = self.CM.rsh(self.target, "CIB_file="+self.cib_tmpfile+" crm configure show "+command, None, )
+        (rc, result) = self.CM.rsh(self.target, "HOME=/root CIB_file="+self.cib_tmpfile+" crm configure show "+command, None, )
         for line in result:
             output += line
             self.CM.debug("Generated Config: "+line)
@@ -401,7 +401,7 @@ class CIB10(CibBase):
         # The shell no longer functions when the lrmd isn't running, how wonderful
         # Start one here and let the cluster clean it up when the full stack starts
         # Just hope target has the same location for lrmd
-        self.CM.rsh(self.target, CTSvars.CRM_DAEMON_DIR+"/lrmd", blocking=0)
+        self.CM.rsh(self.target, CTSvars.CRM_DAEMON_DIR+"/lrmd", synchronous=0)
 
         # Tell the shell to mind its own business, we know what we're doing
         self.CM.rsh(self.target, "crm options check-mode relaxed")
@@ -410,7 +410,7 @@ class CIB10(CibBase):
         self._create('''property stonith-enabled=false''')
 
         self._create('''property start-failure-is-fatal=false pe-input-series-max=5000''')
-        self._create('''property shutdown-escalation=5min startup-fencing=false batch-limit=10''')
+        self._create('''property shutdown-escalation=5min startup-fencing=false batch-limit=10 dc-deadtime=5s''')
         self._create('''property no-quorum-policy=%s expected-quorum-votes=%d''' % (no_quorum, self.num_nodes))
 
         if self.CM.Env["DoBSC"] == 1:
@@ -439,7 +439,7 @@ class CIB10(CibBase):
             else:
                 params = ""
 
-            self._create('''primitive FencingChild stonith::%s %s livedangerously=yes op monitor interval=120s timeout=300 op start interval=0 timeout=180s op stop interval=0 timeout=180s''' % (self.CM.Env["stonith-type"], params))
+            self._create('''primitive FencingChild stonith::%s %s op monitor interval=120s timeout=300 op start interval=0 timeout=180s op stop interval=0 timeout=180s''' % (self.CM.Env["stonith-type"], params))
             # Set a threshold for unreliable stonith devices such as the vmware one
             self._create('''clone Fencing FencingChild meta globally-unique=false migration-threshold=5''')
         
@@ -472,11 +472,7 @@ class CIB10(CibBase):
             self._create('''location prefer-%s %s rule 100: \#uname eq %s''' % (node, r, node))
                 
         # LSB resource
-        lsb_agent=CTSvars.CTS_home+'''/LSBDummy'''
-        self.CM.log("Installing LSB agent %s on %s" % (lsb_agent, repr(self.CM.Env["nodes"])))
-        for node in self.CM.Env["nodes"]:
-            self.CM.rsh(node, "mkdir -p %s" % CTSvars.CTS_home)
-            self.CM.rsh.cp(lsb_agent, "root@%s:%s" % (node, lsb_agent))
+        lsb_agent = self.CM.install_helper("LSBDummy")
     
         self._create('''primitive lsb-dummy lsb::''' +lsb_agent+ ''' op monitor interval=5s''')
         self._create('''colocation lsb-with-group INFINITY: lsb-dummy group-1''')

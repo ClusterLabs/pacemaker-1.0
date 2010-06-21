@@ -21,13 +21,10 @@ Copyright (C) 2007 Andrew Beekhof <andrew@suse.de>
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-import os,sys,CTS,CTSaudits,CTStests, warnings
+import os, sys, warnings
 from CTSvars import *
-from CTS import *
-from CM_lha import crm_lha
-from CTSaudits import ClusterAudit
-from CTStests import *
-from CIB import *
+from CM_lha  import crm_lha
+from CTS     import Process
 
 #######################################################################
 #
@@ -103,7 +100,8 @@ class crm_ais(crm_lha):
     def NodeUUID(self, node):
         return node
 
-    def ais_components(self):    
+    def ais_components(self):   
+        fullcomplist = {}
         self.complist = []
         self.common_ignore = [
                     "Pending action:",
@@ -121,13 +119,12 @@ class crm_ais(crm_lha):
                     "cib_native_msgready: Message pending on command channel",
                     "crmd:.*do_exit: Performing A_EXIT_1 - forcefully exiting the CRMd",
                     "verify_stopped: Resource .* was active at shutdown.  You may ignore this error if it is unmanaged.",
-                    "ERROR: stonithd_op_result_ready: not signed on",
                     "ERROR: attrd_connection_destroy: Lost connection to attrd",
                     "nfo: te_fence_node: Executing .* fencing operation",
             ]
 
-        self.complist.append(Process("cib", 0, [
-                    "State transition S_IDLE",
+        fullcomplist["cib"] = Process(self, "cib", pats = [
+                    "State transition .* S_RECOVERY",
                     "Respawning .* crmd",
                     "Respawning .* attrd",
                     "Lost connection to the CIB service",
@@ -137,54 +134,67 @@ class crm_ais(crm_lha):
                     "crmd: .*Input I_TERMINATE from do_recover",
                     "crmd: .*I_ERROR.*crmd_cib_connection_destroy",
                     "crmd:.*do_exit: Could not recover from internal error",
-                    ], [], self.common_ignore, 0, self))
+                    ], badnews_ignore = self.common_ignore)
 
-        self.complist.append(Process("lrmd", 0, [
-                    "State transition S_IDLE",
+        fullcomplist["lrmd"] = Process(self, "lrmd", pats = [
+                    "State transition .* S_RECOVERY",
                     "LRM Connection failed",
                     "Respawning .* crmd",
                     "crmd: .*I_ERROR.*lrm_connection_destroy",
                     "Child process crmd exited .* rc=2",
                     "crmd: .*Input I_TERMINATE from do_recover",
                     "crmd:.*do_exit: Could not recover from internal error",
-                    ], [], self.common_ignore, 0, self))
-        self.complist.append(Process("crmd", 0, [
+                    ], badnews_ignore = self.common_ignore)
+
+        fullcomplist["crmd"] = Process(self, "crmd", pats = [
 #                    "WARN: determine_online_status: Node .* is unclean",
 #                    "Scheduling Node .* for STONITH",
 #                    "Executing .* fencing operation",
 # Only if the node wasn't the DC:  "State transition S_IDLE",
                     "State transition .* -> S_IDLE",
-                    ], [], self.common_ignore, 0, self))
+                    ], badnews_ignore = self.common_ignore)
 
-        self.complist.append(Process("attrd", 0, [
+        fullcomplist["attrd"] = Process(self, "attrd", pats = [
                     "crmd: .*ERROR: attrd_connection_destroy: Lost connection to attrd"
-                    ], [], self.common_ignore, 0, self))
+                    ], badnews_ignore = self.common_ignore)
 
-        self.complist.append(Process("pengine", 0, [
-                    ], [
-                    "State transition S_IDLE",
+        fullcomplist["pengine"] = Process(self, "pengine", dc_pats = [
+                    "State transition .* S_RECOVERY",
                     "Respawning .* crmd",
                     "Child process crmd exited .* rc=2",
                     "crmd: .*pe_connection_destroy: Connection to the Policy Engine failed",
                     "crmd: .*I_ERROR.*save_cib_contents",
                     "crmd: .*Input I_TERMINATE from do_recover",
                     "crmd:.*do_exit: Could not recover from internal error",
-                    ], self.common_ignore, 0, self))
+                    ], badnews_ignore = self.common_ignore)
 
-        if self.Env["DoFencing"] == 1 :
-            stonith_ignore = [
-                "ERROR: stonithd_signon: ",
-                "update_failcount: Updating failcount for child_DoFencing",
-                "ERROR: te_connect_stonith: Sign-in failed: triggered a retry",
-                ]
-            
-            stonith_ignore.extend(self.common_ignore)
+        stonith_ignore = [
+            "ERROR: stonithd_signon: ",
+            "update_failcount: Updating failcount for child_DoFencing",
+            "ERROR: te_connect_stonith: Sign-in failed: triggered a retry",
+            ]
+        
+        stonith_ignore.extend(self.common_ignore)
+        
+        fullcomplist["stonithd"] = Process(self, "stonithd", pats = [
+                "tengine_stonith_connection_destroy: Fencing daemon connection failed",
+                "Attempting connection to fencing daemon",
+                "te_connect_stonith: Connected",
+                ], badnews_ignore = stonith_ignore)
+        
+        vgrind = self.Env["valgrind-procs"].split()
+        for key in fullcomplist.keys():
+            if self.Env["valgrind-tests"]:
+                if key in vgrind:
+                    # Processes running under valgrind can't be shot with "killall -9 processname"
+                    self.log("Filtering %s from the component list as it is being profiled by valgrind" % key)
+                    continue
+            if key == "stonith-ng" and not self.Env["DoFencing"]:
+                continue
+                
+            self.complist.append(fullcomplist[key])
 
-            self.complist.append(Process("stonithd", 0, [], [
-                        "tengine_stonith_connection_destroy: Fencing daemon connection failed",
-                        "Attempting connection to fencing daemon",
-                        "te_connect_stonith: Connected",
-                        ], stonith_ignore, 0, self))
+        #self.complist = [ fullcomplist["pengine"] ]
         return self.complist
 
 class crm_whitetank(crm_ais):
@@ -226,13 +236,13 @@ class crm_whitetank(crm_ais):
 
         aisexec_ignore.extend(self.common_ignore)
 
-        self.complist.append(Process("aisexec", 0, [
+        self.complist.append(Process(self, "aisexec", pats = [
                     "ERROR: ais_dispatch: AIS connection failed",
                     "crmd: .*ERROR: do_exit: Could not recover from internal error",
                     "pengine: .*Scheduling Node .* for STONITH",
                     "stonithd: .*requests a STONITH operation RESET on node",
                     "stonithd: .*Succeeded to STONITH the node",
-                    ], [], aisexec_ignore, 0, self))
+                    ], badnews_ignore = aisexec_ignore))
         
 class crm_flatiron(crm_ais):
     '''
@@ -275,14 +285,15 @@ class crm_flatiron(crm_ais):
                     "stonithd: .*ERROR: AIS connection terminated",
             ]
 
-        corosync_ignore.extend(self.common_ignore)
+#        corosync_ignore.extend(self.common_ignore)
 
-#        self.complist.append(Process("corosync", 0, [
+#        self.complist.append(Process(self, "corosync", pats = [
 #                    "ERROR: ais_dispatch: AIS connection failed",
 #                    "crmd: .*ERROR: do_exit: Could not recover from internal error",
 #                    "pengine: .*Scheduling Node .* for STONITH",
 #                    "stonithd: .*requests a STONITH operation RESET on node",
 #                    "stonithd: .*Succeeded to STONITH the node",
-#                    ], [], corosync_ignore, 0, self))
+#                    ], badnews_ignore = corosync_ignore))
+        
     
         return self.complist

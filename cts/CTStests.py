@@ -38,11 +38,11 @@ Add RecourceRecover testcase Zhao Kai <zhaokai@cn.ibm.com>
 #                Thank you.
 #
 
-import CTS
-import CTSaudits
 import time, os, re, types, string, tempfile, sys
-from CTSaudits import *
 from stat import *
+
+import CTS
+from CTSaudits import *
 
 AllTestClasses = [ ]
 
@@ -263,7 +263,7 @@ class StopTest(CTSTest):
         # NOTE: This wont work if we have multiple partitions
         for other in self.CM.Env["nodes"]:
             if self.CM.ShouldBeStatus[other] == "up" and other != node:
-                patterns.append(self.CM["Pat:They_stopped"] %(other, node))
+                patterns.append(self.CM["Pat:They_stopped"] %(other, self.CM.key_for_node(node)))
                 #self.debug("Checking %s will notice %s left"%(other, node))
                 
         watch = self.create_watch(patterns, self.CM["DeadTime"])
@@ -431,16 +431,19 @@ class StonithdTest(CTSTest):
         is_dc = self.CM.is_node_dc(node)
 
         watchpats = []
-        watchpats.append("Scheduling Node %s for STONITH" % node)
         watchpats.append("Executing .* fencing operation")
         watchpats.append("sending fencing op RESET for %s" % node)
 
-        if self.CM.Env["LogWatcher"] != "remote" or not is_dc:
-            watchpats.append("Node %s will be fenced because termination was requested" % node)
-
         if not is_dc:
-            # Won't be found if the DC is shot (and there's no equivalent message from stonithd)
-            watchpats.append("tengine_stonith_callback: .*result=0")
+            watchpats.append("tengine_stonith_callback: .*result=0 ")
+
+        if self.CM.Env["LogWatcher"] != "remote" or not is_dc:
+            # Often remote logs aren't flushed to disk by the time the node is shot,
+            #   so we wont be able to find them
+            # Remote syslog doesn't suffer this problem because they're already on 
+            #   the loghost when the node is shot
+            watchpats.append("Node %s will be fenced because termination was requested" % node)
+            watchpats.append("Scheduling Node %s for STONITH" % node)
 
         if self.CM.Env["at-boot"] == 0:
             self.CM.debug("Expecting %s to stay down" % node)
@@ -459,9 +462,7 @@ class StonithdTest(CTSTest):
         matched = watch.lookforall()
         self.log_timer("fence")
         self.set_timer("reform")
-        if matched:
-            self.CM.debug("Found: "+ repr(matched))
-        else:
+        if watch.unmatched:
             self.CM.log("Patterns not found: " + repr(watch.unmatched))
 
         self.CM.debug("Waiting for the cluster to recover")
@@ -849,7 +850,8 @@ class ValgrindTest(CTSTest):
                 (rc, output) = self.CM.rsh(node, "cat %s" % self.logPat, None)
                 for line in output:
                     self.CM.debug(line)
-                self.CM.rsh(node, "rm -f %s" % self.logPat, None)
+
+        self.CM.rsh(node, "rm -f %s" % self.logPat, None)
         return leaked
 
     def __call__(self, node):
@@ -1172,7 +1174,7 @@ class ComponentFail(CTSTest):
             # Make sure the node goes down and then comes back up if it should reboot...
             for other in self.CM.Env["nodes"]:
                 if other != node:
-                    self.patterns.append(self.CM["Pat:They_stopped"] %(other, node))
+                    self.patterns.append(self.CM["Pat:They_stopped"] %(other, self.CM.key_for_node(node)))
             self.patterns.append(self.CM["Pat:Slave_started"] % node)
             self.patterns.append(self.CM["Pat:Local_started"] % node)
 
@@ -1195,7 +1197,7 @@ class ComponentFail(CTSTest):
 
         # Look for STONITH ops, depending on Env["at-boot"] we might need to change the nodes status
         stonithPats = []
-        stonithPats.append("sending fencing op RESET for %s" % node)
+        stonithPats.append("stonith-ng:.*Operation .* for host '%s' with device .* returned: 0" % node)
         stonith = self.create_watch(stonithPats, 0)
         stonith.setwatch()
 
@@ -1209,9 +1211,7 @@ class ComponentFail(CTSTest):
 
         # check to see Heartbeat noticed
         matched = watch.lookforall(allow_multiple_matches=1)
-        if matched:
-            self.CM.debug("Found: "+ repr(matched))
-        else:
+        if watch.unmatched:
             self.CM.log("Patterns not found: " + repr(watch.unmatched))
 
         if self.CM.Env["at-boot"] == 0:
@@ -1488,6 +1488,7 @@ class Reattach(CTSTest):
 
         self.CM.debug("Bringing the cluster back up")
         ret = self.startall(None)
+        time.sleep(5) # allow ping to update the CIB
         if not ret:
             self.CM.debug("Re-enable resource management")
             self.CM.rsh(node, "crm_attribute -D -n is-managed-default")
@@ -1807,7 +1808,7 @@ class NearQuorumPointTest(CTSTest):
             else:
                 for stopping in stopset:
                     if self.CM.ShouldBeStatus[stopping] == "up":
-                        watchpats.append(self.CM["Pat:They_stopped"] % (node, stopping))
+                        watchpats.append(self.CM["Pat:They_stopped"] % (node, self.CM.key_for_node(stopping)))
                 
         if len(watchpats) == 0:
             return self.skipped()
