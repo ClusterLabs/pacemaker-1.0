@@ -544,7 +544,7 @@ class crm_lha(ClusterManager):
                     ], badnews_ignore = common_ignore, dc_only=1)
 
         if self.Env["DoFencing"] == 1 :
-            complist.append(Process(self, "stoniths", triggersreboot=self.fastfail, dc_pats = [
+            complist.append(Process(self, "stonithd", triggersreboot=self.fastfail, dc_pats = [
                         "crmd: .*CRIT: tengine_stonith_connection_destroy: Fencing daemon connection failed",
                         "Attempting connection to fencing daemon",
                         "te_connect_stonith: Connected",

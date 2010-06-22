@@ -435,7 +435,7 @@ class StonithdTest(CTSTest):
         watchpats.append("sending fencing op RESET for %s" % node)
 
         if not is_dc:
-            watchpats.append("tengine_stonith_callback: .*result=0 ")
+            watchpats.append("tengine_stonith_callback: .*result=0")
 
         if self.CM.Env["LogWatcher"] != "remote" or not is_dc:
             # Often remote logs aren't flushed to disk by the time the node is shot,
@@ -1197,7 +1197,7 @@ class ComponentFail(CTSTest):
 
         # Look for STONITH ops, depending on Env["at-boot"] we might need to change the nodes status
         stonithPats = []
-        stonithPats.append("stonith-ng:.*Operation .* for host '%s' with device .* returned: 0" % node)
+        stonithPats.append("sending fencing op RESET for %s" % node)
         stonith = self.create_watch(stonithPats, 0)
         stonith.setwatch()
 
