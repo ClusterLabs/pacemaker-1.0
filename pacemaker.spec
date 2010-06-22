@@ -2,7 +2,7 @@
 %global uname hacluster
 %global pcmk_docdir %{_docdir}/%{name}
 
-%global specversion 0.3
+%global specversion 1
 #global upstream_version ee19d8e83c2a
 %global upstream_prefix pacemaker
 
@@ -277,6 +277,80 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
+* Tue Jun 22 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
+- Update source tarball to revision: 80872c8520f9 (stable-1.0) tip
+- Statistics:
+  Changesets: 147
+  Diff:       265 files changed, 14240 insertions(+), 3817 deletions(-)
+
+- Changes since Pacemaker-1.0.8
+  + High: ais: Ensure the list of active processes sent to clients is always up-to-date
+  + High: ais: Fix previous commit, actually return a result in get_process_list()
+  + High: ais: Fix two more uses of getpwnam() in non-thread-safe locations
+  + High: ais: Look for the correct conf variable for turning on file logging
+  + High: ais: Need to find a better and thread-safe way to set core_uses_pid. Disable for now.
+  + High: ais: Use the threadsafe version of getpwnam
+  + High: cib: Also free query result for xpath operations that return more than one hit
+  + High: cib: Fix the application of unversioned diffs
+  + High: cib: Remove old developmental error logging
+  + High: Core: Bug lf#2414 - Prevent use-after-free reported by valgrind when doing xpath based deletions
+  + High: Core: Fix memory leak in replace_xml_child() reported by valgrind
+  + High: Core: fix memory leaks exposed by valgrind
+  + High: crmd: Bug 2401 - Improved detection of partially active peers
+  + High: crmd: Bug lf#2379 - Ensure the cluster terminates when the PE is not available
+  + High: crmd: Bug lf#2414 - Prevent use-after-free of the PE connection after it dies
+  + High: crmd: Bug lf#2439 - cancel_op() can also return HA_RSCBUSY
+  + High: crmd: Bug lf#2439 - Handle asynchronous notification of resource deletion events
+  + High: crmd: Do not allow the target_rc to be misused by resource agents
+  + High: crmd: Do not ignore action timeouts based on FSA state
+  + High: crmd: Ensure we dont get stuck in S_PENDING if we loose an election to someone that never talks to us again
+  + High: crmd: Fix memory leaks exposed by valgrind
+  + High: crmd: Remove race condition that could lead to multiple instances of a clone being active on a machine
+  + High: crmd: Send erase_status_tag() calls to the local CIB when the DC is fenced, since there is no DC to accept them
+  + High: PE: Bug lf#1959 - Fail unmanaged resources should not prevent other services from shutting down
+  + High: PE: Bug lf#2383 - Combine failcounts for all instances of an anonymous clone on a host
+  + High: PE: Bug lf#2384 - Fix intra-set colocation and ordering
+  + High: PE: Bug lf#2403 - Enforce mandatory promotion (colocation) constraints
+  + High: PE: Bug lf#2412 - Correctly locate clone instances by their prefix
+  + High: PE: Bug lf#2422 - Ordering dependencies on partially active groups not observed properly
+  + High: PE: Bug lf#2424 - Use notify oepration definition if it exists in the configuration
+  + High: PE: Bug lf#2433 - No services should be stopped until probes finish
+  + High: PE: Do not be so quick to pull the trigger on nodes that are coming up
+  + High: PE: Fix colocation for interleaved clones
+  + High: PE: Fix colocation with partially active groups
+  + High: PE: Fix memory leaks reported by valgrind
+  + High: PE: Make the current data set a global variable so it does not need to be passed around everywhere
+  + High: PE: Prevent endless loop when looking for operation definitions in the configuration
+  + High: PE: Rewrite native_merge_weights() to avoid Fix use-after-free
+  + High: Shell: always reload status if working with the cluster (bnc#590035)
+  + High: Tools: crm_mon - fix memory leaks exposed by valgrind
+  + Medium: ais: Correctly set logfile permissions in all cases
+  + Medium: ais: create the final directory too for resource agents (bnc#603190)
+  + Medium: ais: Make sure debug messages make it into the logfiles too
+  + Medium: Build: Do not enable the -ansi compiler option by default, prevents use of strtoll()
+  + Medium: cib: Bug lf#2352 - Changes to group order are not detected or broadcast to peers
+  + Medium: cib: Correctly free the cib contents at signoff when in file-based mode
+  + Medium: cib: xpath - Allow all hits to be deleted, allow the no_children option to return multiple hits
+  + Medium: PE: Bug lf#2391 - Ensure important options (notify, unique, etc) are always exposed during resource operations
+  + Medium: PE: Bug lf#2410 - Do not complain about missing agents during probes of a-symetric clusters
+  + Medium: PE: Bug lf#2426 - stop-all-resources should not apply to stonith resources
+  + Medium: PE: Bug lf#2435 - Support colocation sets with negative scores
+  + Medium: PE: Check for use-of-NULL in dump_node_scores()
+  + Medium: PE: Do not overwrite existing meta attributes (like timeout) for notify operations
+  + Medium: PE: Ensure deallocated resources are stopped
+  + Medium: PE: If there are no compatible peers when interleaving clones, ensure the instance is stopped
+  + Medium: PE: Ignore colocation weights from clone instances
+  + Medium: RA: SystemHealth: exit properly when the required software is not installed (bnc#587940)
+  + Medium: Shell: do not error on missing resource agent with asymmetrical clusters (lf#2410)
+  + Medium: Shell: do not verify empty configurations (bnc#602711)
+  + Medium: shell: find hb_delnode in correct directory
+  + Medium: Shell: observe op_defaults when verifying primitives (bnc#590033)
+  + Medium: Shell: on no id match the first of property-like elements (lf#2420)
+  + Medium: Shell: skip resource checks for property-like elements (lf#2420)
+  + Medium: Shell: verify meta attributes and properties (bnc#589867)
+  + Medium: Shell: verify only changed elements on commit (bnc#590033)
+  + Medium: Tools: crm_mon: refresh screen on terminal resize (bnc#589811)
+
 * Thu Apr 15 2010 Andrew Beekhof <andrew@beekhof.net> - 1.0.8-6
 - Rebuild for glue 1.0.5
 
