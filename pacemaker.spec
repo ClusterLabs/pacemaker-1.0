@@ -3,7 +3,7 @@
 %global pcmk_docdir %{_docdir}/%{name}
 
 %global specversion 1
-#global upstream_version ee19d8e83c2a
+#global upstream_version 00c6e47d32f3
 %global upstream_prefix pacemaker
 
 # Keep around for when/if required
@@ -274,11 +274,11 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
-* Tue Jun 22 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
-- Update source tarball to revision: 80872c8520f9 (stable-1.0) tip
+* Wed Jun 23 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
+- Update source tarball to revision: 0796085f3833+ (stable-1.0) tip
 - Statistics:
-  Changesets: 147
-  Diff:       265 files changed, 14240 insertions(+), 3817 deletions(-)
+  Changesets: 152
+  Diff:       266 files changed, 14324 insertions(+), 3842 deletions(-)
 
 - Changes since Pacemaker-1.0.8
   + High: ais: Ensure the list of active processes sent to clients is always up-to-date
