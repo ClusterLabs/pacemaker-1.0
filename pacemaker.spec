@@ -2,7 +2,7 @@
 %global uname hacluster
 %global pcmk_docdir %{_docdir}/%{name}
 
-%global specversion 1
+%global specversion 1.4
 #global upstream_version 00c6e47d32f3
 %global upstream_prefix pacemaker
 
@@ -37,7 +37,7 @@
 
 Name:		pacemaker
 Summary:	Scalable High-Availability cluster resource manager
-Version:	1.0.9
+Version:	1.0.9.1
 Release:	%{pcmk_release}
 License:	GPLv2+ and LGPLv2+
 Url:		http://www.clusterlabs.org
@@ -274,6 +274,15 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
+* Wed Jun 23 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9.1-1
+- Update source tarball to revision: c9a5915827d0 (stable-1.0) tip
+- Statistics:
+  Changesets: 4
+  Diff:       2 files changed, 3 insertions(+), 1 deletion(-)
+
+- Changes since Pacemaker-1.0.9
+  + High: ais: Fix unterminated recursion in init_ais_connection()
+
 * Wed Jun 23 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
 - Update source tarball to revision: 0796085f3833+ (stable-1.0) tip
 - Statistics:
