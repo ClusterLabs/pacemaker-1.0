@@ -383,7 +383,7 @@ main(int argc, char ** argv)
 
     crm_peer_init();
     crm_log_init(basename(argv[0]), LOG_WARNING, FALSE, FALSE, argc, argv);
-    crm_set_options("?V$qepHR:ifl", "command [options]", long_options,
+    crm_set_options("?V$qepHAR:ifl", "command [options]", long_options,
 		    "Tool for displaying low-level node information");
 	
     while (flag >= 0) {
