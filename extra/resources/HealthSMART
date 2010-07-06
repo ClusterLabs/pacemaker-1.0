@@ -116,7 +116,7 @@ init_smart() {
     lower_yellow_limit=5
   else
     lower_red_limit=${OCF_RESKEY_temp_lower_limit}
-    let lower_yellow_limit=${OCF_RESKEY_temp_lower_limit}+5
+    lower_yellow_limit=$(($OCF_RESKEY_temp_lower_limit+5))
   fi
 
   if [ "x${OCF_RESKEY_temp_upper_limit}" = "x" ] ; then
@@ -124,7 +124,7 @@ init_smart() {
     upper_yellow_limit=55
   else
     upper_red_limit=${OCF_RESKEY_temp_upper_limit}
-    let upper_yellow_limit=${OCF_RESKEY_temp_upper_limit}-5
+    upper_yellow_limit=$(($OCF_RESKEY_temp_upper_limit-5))
   fi
 
   if [ "x${OCF_RESKEY_drives}" = "x" ] ; then
@@ -195,25 +195,25 @@ dummy_monitor() {
 	  #
 	  TEMP=`$SMARTCTL -A /dev/sda | awk '/^194/ { print $10 }'` 
 	  echo "Temp = "$TEMP
-	  if [[ ${TEMP} -lt ${lower_red_limit} ]] ; then
+	  if [ ${TEMP} -lt ${lower_red_limit} ] ; then
 	    ocf_log info "Drive /dev/sda too cold."
 	    attrd_updater -n "#health-smart" -U "red" -d "5s"
 	    return $OCF_SUCCESS
 	  fi
 
-	  if [[ $TEMP -gt ${upper_red_limit} ]] ; then
+	  if [ $TEMP -gt ${upper_red_limit} ] ; then
 	    ocf_log info "Drive /dev/sda too hot."
 	    attrd_updater -n "#health-smart" -U "red" -d "5s"
 	    return $OCF_SUCCESS
 	  fi
 
-	  if [[ $TEMP -lt ${lower_yellow_limit} ]] ; then
+	  if [ $TEMP -lt ${lower_yellow_limit} ] ; then
             ocf_log info "Drive /dev/sda quite cold."
             attrd_updater -n "#health-smart" -U "yellow" -d "5s"
             return $OCF_SUCCESS
           fi
 
-          if [[ $TEMP -gt ${upper_yellow_limit} ]] ; then
+          if [ $TEMP -gt ${upper_yellow_limit} ] ; then
             ocf_log info "Drive /dev/sda quite hot."
             attrd_updater -n "#health-smart" -U "yellow" -d "5s"
             return $OCF_SUCCESS
