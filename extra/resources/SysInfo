@@ -196,7 +196,7 @@ SysInfoStats() {
     #	  'tail -n <c>' to the equivalent 'tail -<c>'.
     for disk in "/" ${OCF_RESKEY_disks}; do
 	unset disk_free disk_label
-	disk_free=`df -k ${disk} | tail -1 | awk '{print $4}'`
+	disk_free=`df -h ${disk} | tail -1 | awk '{print $4}'`
 	if [ x != x"$disk_free" ]; then
 	    disk_label=`echo $disk | sed -e 's#^/$#root#;s#^/*##;s#/#_#g'`
 	    UpdateStat ${disk_label}_free `SysInfo_hdd_units $disk_free`
@@ -223,7 +223,6 @@ SysInfo_mem_units() {
     fi
 
     mem=$(SysInfo_megabytes "$1")
-
     # Round to the next multiple of 50
     r=$(($mem % 50))
     if [ $r != 0 ]; then
@@ -234,37 +233,19 @@ SysInfo_mem_units() {
 }
 
 SysInfo_hdd_units() {
-    disk_size=$1
-    disk_unit=${OCF_RESKEY_disk_unit}
-    if [ -z $disk_unit ]; then
-	disk_unit="G"
-    fi
-    
-    case $disk_unit in
-	[Pp])
-            disk_size=$((disk_size/1024/1024/1024/1024))
-	    ;;
-	[Tt])
-            disk_size=$((disk_size/1024/1024/1024))
-	    ;;
-	[Gg])
-            disk_size=$((disk_size/1024/1024))
-            ;;
-        [Mm])
-            disk_size=$((disk_size/1024))
-            ;;
-        [Kk])
-	    #Already in KB
-            ;;
-        [Bb])
-            disk_size=$((disk_size*1024))
-            ;;
-           *)
-	    ocf_log err "disk_unit set to invalid unit"
-	    exit $OCF_ERR_ARGS
-    esac
+    # Defauts to size in gigabytes
 
-    echo $disk_size
+    case $OCF_RESKEY_disk_unit in 
+	[Pp]) echo $(($(SysInfo_megabytes "$1") / 1024 / 1024 / 1024));;
+	[Tt]) echo $(($(SysInfo_megabytes "$1") / 1024 / 1024));;
+	[Gg]) echo $(($(SysInfo_megabytes "$1") / 1024));;
+	[Mm]) echo SysInfo_megabytes "$1";;
+	[Kk]) echo $(($(SysInfo_megabytes "$1") * 1024));;
+	[Bb]) echo $(($(SysInfo_megabytes "$1") * 1024 * 1024));;
+	*) 
+	    ocf_log err "Invalid value for disk_unit: $OCF_RESKEY_disk_unit"
+	    echo $(($(SysInfo_megabytes "$1") / 1024));;
+    esac
 }
 
 SysInfo_usage() {
@@ -320,6 +301,7 @@ if [ $# -ne 1 ]; then
 fi
 
 : ${OCF_RESKEY_pidfile:="$HA_VARRUN/SysInfo-${OCF_RESOURCE_INSTANCE}"}
+: ${OCF_RESKEY_disk_unit:="G"}
 : ${OCF_RESKEY_clone:="0"}
 if [ x != x${OCF_RESKEY_delay} ]; then
     OCF_RESKEY_delay="-d ${OCF_RESKEY_delay}"
