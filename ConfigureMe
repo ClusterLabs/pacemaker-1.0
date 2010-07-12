@@ -294,7 +294,7 @@ case $cmd in
 	;;
   distcheck)			
   	do_configure $FLAGS $@ && \
-	source ./heartbeat/lib/ha_config && \
+	. ./heartbeat/lib/ha_config && \
 	Run $MAKE_CMD DESTDIR="$PWD/heartbeat-$VERSION/=inst" distcheck
 	;;
   pkg|package|rpm|deb|dpkg)	

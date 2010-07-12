@@ -36,51 +36,51 @@ RCP=scp
 ERR_COUNT=0
 
 $LRMADMIN -A myid1 stonith null NULL hostlist=$NODE2
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $LRMADMIN -A myid2 stonith null NULL hostlist=$NODE3
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $LRMADMIN -E myid1 start 0 0 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $LRMADMIN -E myid2 start 0 0 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 
 $RSH root@$NODE2 $LRMADMIN -A myid3 stonith null NULL hostlist=$NODE1
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $RSH root@$NODE2 $LRMADMIN -A myid4 stonith null NULL hostlist=$NODE3
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $RSH root@$NODE2 $LRMADMIN -E myid3 start 0 0 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $RSH root@$NODE2 $LRMADMIN -E myid4 start 0 0 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 
 $APITEST 0 $NODE3 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $APITEST 1 $NODE3 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $APITEST 1 $NODE1 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $APITEST 1 $NODE2 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $APITEST 3 $NODE4 4000 2
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 
 echo "will run test on the $NODE2"
 
 $RCP .libs/$APITEST root@$NODE2:
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 
 $RSH root@$NODE2 $APITEST 0 $NODE3 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $RSH root@$NODE2 $APITEST 1 $NODE3 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $RSH root@$NODE2 $APITEST 1 $NODE1 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $RSH root@$NODE2 $APITEST 1 $NODE2 4000 0
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 $APITEST 2 $NODE4 4000 2
-[ $? == 0 ] || let ERR_COUNT++ 
+[ $? = 0 ] || ERR_COUNT=$(($ERR_COUNT+1))
 
-if [ $ERR_COUNT == 0 ]; then
+if [ $ERR_COUNT = 0 ]; then
 	echo "All tests are ok."
 else
 	echo "There are $ERR_COUNT errors."
