@@ -58,8 +58,6 @@ def get_status_ops(status_node,rsc,op,interval,node = ''):
                   (interval != "" and o.getAttribute("interval") == interval):
                     l.append(o)
     return l
-def shadowfile(name):
-    return "%s/shadow.%s" % (vars.crm_conf_dir, name)
 
 class CibStatus(Singleton):
     '''
