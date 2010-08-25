@@ -344,5 +344,8 @@ do_test systemhealthp2 "System Health (Progessive)     #2"
 do_test systemhealthp3 "System Health (Progessive)     #3"
 
 echo ""
+do_test bug-lf-2474 "Ensure resource op timeout takes precedence over op_defaults"
+
+echo ""
 
 test_results
