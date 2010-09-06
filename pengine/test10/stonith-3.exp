@@ -131,7 +131,7 @@
   <synapse id="9">
     <action_set>
       <pseudo_event id="25" operation="stop" operation_key="prmStonith:0_stop_0">
-        <attributes CRM_meta_clone="0" CRM_meta_clone_max="2" CRM_meta_clone_node_max="1" CRM_meta_globally_unique="false" CRM_meta_notify="false" CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+        <attributes CRM_meta_clone="0" CRM_meta_clone_max="2" CRM_meta_clone_node_max="1" CRM_meta_globally_unique="false" CRM_meta_notify="false" CRM_meta_timeout="20000" crm_feature_set="3.0.1" hostlist="rh5node1 rh5node2" stonith-timeout="70s"/>
       </pseudo_event>
     </action_set>
     <inputs>
