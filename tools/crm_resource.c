@@ -66,6 +66,7 @@ GMainLoop *mainloop = NULL;
     } while(0)
 
 #define message_timeout_ms 60*1000
+extern void cleanup_alloc_calculations(pe_working_set_t *data_set);
 
 static gboolean
 resource_ipc_timeout(gpointer data)
@@ -1551,7 +1552,7 @@ main(int argc, char **argv)
 	}
 
 	if(cib_conn != NULL) {
-		cleanup_calculations(&data_set);
+		cleanup_alloc_calculations(&data_set);
 		cib_conn->cmds->signoff(cib_conn);
 	}
 	if(rc == cib_no_quorum) {
