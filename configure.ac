@@ -1328,7 +1328,6 @@ else
 		-Wall
 		-Waggregate-return
 		-Wbad-function-cast 
-		-Wcast-qual 
 		-Wcast-align 
 		-Wdeclaration-after-statement
 		-Wendif-labels
