@@ -449,7 +449,7 @@ parse_peer_options(
 		crm_debug_2("Processing request sent to us from %s", originator);
 		return TRUE;
 
-	} else if(delegated != NULL && cib_is_master == TRUE) {
+	} else if(host == NULL && cib_is_master == TRUE) {
 		crm_debug_2("Processing request sent to master instance from %s",
 			originator);
 		return TRUE;
