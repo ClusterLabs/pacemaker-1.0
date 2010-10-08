@@ -18,7 +18,7 @@ group_color: r192.168.101.183 allocation score on pcmk-4: 0
 clone_color: master-1 allocation score on pcmk-1: 0
 clone_color: master-1 allocation score on pcmk-2: 0
 clone_color: master-1 allocation score on pcmk-3: 0
-clone_color: master-1 allocation score on pcmk-4: -1000000
+clone_color: master-1 allocation score on pcmk-4: 0
 clone_color: stateful-1:0 allocation score on pcmk-1: 11
 clone_color: stateful-1:0 allocation score on pcmk-2: 0
 clone_color: stateful-1:0 allocation score on pcmk-3: 0

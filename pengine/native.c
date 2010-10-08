@@ -196,15 +196,20 @@ node_list_update(GListPtr list1, GListPtr list2, const char *attr, int factor, g
 	     *
 	     */
 	    crm_debug_2("%s: Filtering %d + %d*%d (factor * score)",
-			node->details->uname, node->weight, factor, score);
+		      node->details->uname, node->weight, factor, score);
 
-	} else if(only_positive && new_score < 0 && score > 0) {
-	    new_score = 1;
-	    crm_debug_2("%s: Filtering %d + %d*%d (score)",
-			node->details->uname, node->weight, factor, score);
+	} else if(only_positive && new_score < 0 && node->weight > 0) {
+	    node->weight = 1;
+	    crm_debug_2("%s: Filtering %d + %d*%d (score > 0)",
+		      node->details->uname, node->weight, factor, score);
+
+	} else if(only_positive && new_score < 0 && node->weight == 0) {
+	    crm_debug_2("%s: Filtering %d + %d*%d (score == 0)",
+		      node->details->uname, node->weight, factor, score);
+
 	} else {
 	    crm_debug_2("%s: %d + %d*%d",
-			node->details->uname, node->weight, factor, score);
+		      node->details->uname, node->weight, factor, score);
 	    node->weight = new_score;
 	}
 	);
@@ -308,7 +313,7 @@ native_color(resource_t *rsc, pe_working_set_t *data_set)
 	    
 	    rsc->allowed_nodes = constraint->rsc_lh->cmds->merge_weights(
 		constraint->rsc_lh, rsc->id, rsc->allowed_nodes,
-		constraint->node_attribute, constraint->score/INFINITY, TRUE);
+		constraint->node_attribute, constraint->score/INFINITY, TRUE, FALSE);
 	    );
 	
 	print_resource(LOG_DEBUG_2, "Allocating: ", rsc, FALSE);

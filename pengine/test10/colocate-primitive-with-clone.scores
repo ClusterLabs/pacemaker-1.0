@@ -19,7 +19,7 @@ group_color: UmDummy02 allocation score on srv01: 0
 group_color: UmDummy02 allocation score on srv02: 0
 group_color: UmDummy02 allocation score on srv03: 0
 group_color: UmDummy02 allocation score on srv04: 0
-clone_color: clnDiskd1 allocation score on srv01: -1000000
+clone_color: clnDiskd1 allocation score on srv01: 0
 clone_color: clnDiskd1 allocation score on srv02: 500
 clone_color: clnDiskd1 allocation score on srv03: 500
 clone_color: clnDiskd1 allocation score on srv04: 500
@@ -55,7 +55,7 @@ native_color: clnPrmDiskd1:0 allocation score on srv01: -1000000
 native_color: clnPrmDiskd1:0 allocation score on srv02: -1000000
 native_color: clnPrmDiskd1:0 allocation score on srv03: -1000000
 native_color: clnPrmDiskd1:0 allocation score on srv04: -1000000
-clone_color: clnG3dummy1 allocation score on srv01: -1000000
+clone_color: clnG3dummy1 allocation score on srv01: 0
 clone_color: clnG3dummy1 allocation score on srv02: 500
 clone_color: clnG3dummy1 allocation score on srv03: 500
 clone_color: clnG3dummy1 allocation score on srv04: 500
@@ -91,7 +91,7 @@ native_color: clnG3dummy01:0 allocation score on srv01: -1000000
 native_color: clnG3dummy01:0 allocation score on srv02: -1000000
 native_color: clnG3dummy01:0 allocation score on srv03: -1000000
 native_color: clnG3dummy01:0 allocation score on srv04: -1000000
-clone_color: clnG3dummy2 allocation score on srv01: -1000000
+clone_color: clnG3dummy2 allocation score on srv01: 0
 clone_color: clnG3dummy2 allocation score on srv02: 500
 clone_color: clnG3dummy2 allocation score on srv03: 500
 clone_color: clnG3dummy2 allocation score on srv04: 500
@@ -127,7 +127,7 @@ native_color: clnG3dummy02:0 allocation score on srv01: -1000000
 native_color: clnG3dummy02:0 allocation score on srv02: -1000000
 native_color: clnG3dummy02:0 allocation score on srv03: -1000000
 native_color: clnG3dummy02:0 allocation score on srv04: -1000000
-clone_color: clnPingd allocation score on srv01: -1000000
+clone_color: clnPingd allocation score on srv01: 0
 clone_color: clnPingd allocation score on srv02: 500
 clone_color: clnPingd allocation score on srv03: 500
 clone_color: clnPingd allocation score on srv04: 500
@@ -163,7 +163,7 @@ native_color: clnPrmPingd:0 allocation score on srv01: -1000000
 native_color: clnPrmPingd:0 allocation score on srv02: -1000000
 native_color: clnPrmPingd:0 allocation score on srv03: -1000000
 native_color: clnPrmPingd:0 allocation score on srv04: -1000000
-clone_color: clnUMgroup01 allocation score on srv01: -1000000
+clone_color: clnUMgroup01 allocation score on srv01: 0
 clone_color: clnUMgroup01 allocation score on srv02: -1000000
 clone_color: clnUMgroup01 allocation score on srv03: -1000000
 clone_color: clnUMgroup01 allocation score on srv04: 0

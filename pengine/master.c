@@ -305,7 +305,7 @@ static void master_promotion_order(resource_t *rsc)
 	    crm_debug_2("RHS: %s with %s: %d", constraint->rsc_lh->id, constraint->rsc_rh->id, constraint->score);
 	    rsc->allowed_nodes = constraint->rsc_rh->cmds->merge_weights(
 		constraint->rsc_rh, rsc->id, rsc->allowed_nodes,
-		constraint->node_attribute, constraint->score/INFINITY, constraint->score==INFINITY?FALSE:TRUE);
+		constraint->node_attribute, constraint->score/INFINITY, constraint->score==INFINITY?FALSE:TRUE, FALSE);
 	    clear_bit(rsc->flags, pe_rsc_merging);
 	}
 	);
@@ -318,7 +318,7 @@ static void master_promotion_order(resource_t *rsc)
 	if(constraint->role_rh == RSC_ROLE_MASTER) {
 	    set_bit(rsc->flags, pe_rsc_merging);
 	    crm_debug_2("LHS: %s with %s: %d", constraint->rsc_lh->id, constraint->rsc_rh->id, constraint->score);
-	    rsc->allowed_nodes = rsc_merge_weights(
+	    rsc->allowed_nodes = constraint->rsc_lh->cmds->merge_weights(
 		constraint->rsc_lh, rsc->id, rsc->allowed_nodes,
 		constraint->node_attribute, constraint->score/INFINITY, TRUE, TRUE);
 	    clear_bit(rsc->flags, pe_rsc_merging);
@@ -594,6 +594,7 @@ master_color(resource_t *rsc, pe_working_set_t *data_set)
 
 	    );
 
+	dump_node_scores(LOG_DEBUG_3, rsc, "Pre merge", rsc->allowed_nodes);
 	master_promotion_order(rsc);
 
 	/* mark the first N as masters */

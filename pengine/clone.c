@@ -275,20 +275,20 @@ gint sort_clone_instance(gconstpointer a, gconstpointer b)
 		constraint, rsc_colocation_t, resource1->parent->rsc_cons_lhs, lpc,
 		do_crm_log_unlikely(level+1, "Applying %s to %s", constraint->id, resource1->id);
 		
-		list1 = native_merge_weights(
+		list1 = rsc_merge_weights(
 		    constraint->rsc_lh, resource1->id, list1,
 		    constraint->node_attribute,
-		    constraint->score/INFINITY, FALSE);
+		    constraint->score/INFINITY, FALSE, TRUE);
 		);    
 
 	    slist_iter(
 		constraint, rsc_colocation_t, resource2->parent->rsc_cons_lhs, lpc,
 		do_crm_log_unlikely(level+1, "Applying %s to %s", constraint->id, resource2->id);
 		
-		list2 = native_merge_weights(
+		list2 = rsc_merge_weights(
 		    constraint->rsc_lh, resource2->id, list2,
 		    constraint->node_attribute,
-		    constraint->score/INFINITY, FALSE);
+		    constraint->score/INFINITY, FALSE, TRUE);
 		);    
 
 	    list1 = g_list_sort(list1, sort_node_weight);
@@ -449,7 +449,7 @@ clone_color(resource_t *rsc, pe_working_set_t *data_set)
 	    
 	    rsc->allowed_nodes = constraint->rsc_lh->cmds->merge_weights(
 		constraint->rsc_lh, rsc->id, rsc->allowed_nodes,
-		constraint->node_attribute, constraint->score/INFINITY, TRUE);
+		constraint->node_attribute, constraint->score/INFINITY, TRUE, TRUE);
 	    );
 	
 	dump_node_scores(show_scores?0:scores_log_level, rsc, __FUNCTION__, rsc->allowed_nodes);

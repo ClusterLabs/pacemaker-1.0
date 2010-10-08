@@ -1,7 +1,7 @@
 Allocation scores:
 clone_color: base-clone allocation score on hex-7: 16
 clone_color: base-clone allocation score on hex-8: 16
-clone_color: base-clone allocation score on hex-9: -1000000
+clone_color: base-clone allocation score on hex-9: 0
 clone_color: base-clone allocation score on hex-0: 14
 clone_color: base-group:0 allocation score on hex-7: 0
 clone_color: base-group:0 allocation score on hex-8: 0
