@@ -1,0 +1,312 @@
+<transition_graph cluster-delay="60s" stonith-timeout="60s" failed-stop-offset="INFINITY" failed-start-offset="INFINITY" batch-limit="30" transition_id="0">
+  <synapse id="0">
+    <action_set>
+      <pseudo_event id="304" operation="start" operation_key="http-server_start_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <pseudo_event id="306" operation="stop" operation_key="http-server_stop_0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="307" operation="stopped" operation_key="http-server_stopped_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="1">
+    <action_set>
+      <pseudo_event id="306" operation="stop" operation_key="http-server_stop_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs/>
+  </synapse>
+  <synapse id="2">
+    <action_set>
+      <pseudo_event id="307" operation="stopped" operation_key="http-server_stopped_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="301" operation="stop" operation_key="vip-233_stop_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="306" operation="stop" operation_key="http-server_stop_0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="664" operation="stop" operation_key="nginx_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="3">
+    <action_set>
+      <rsc_op id="301" operation="stop" operation_key="vip-233_stop_0" on_node="s01-0" on_node_uuid="s01-0">
+        <primitive id="vip-233" long-id="http-server:vip-233" class="ocf" provider="heartbeat" type="IPaddr2"/>
+        <attributes CRM_meta_timeout="20000" cidr_netmask="32" crm_feature_set="3.0.1" ip="10.5.4.233" nic="vlan1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <pseudo_event id="306" operation="stop" operation_key="http-server_stop_0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="664" operation="stop" operation_key="nginx_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="4">
+    <action_set>
+      <rsc_op id="302" operation="start" operation_key="vip-233_start_0" on_node="s01-1" on_node_uuid="s01-1">
+        <primitive id="vip-233" long-id="http-server:vip-233" class="ocf" provider="heartbeat" type="IPaddr2"/>
+        <attributes CRM_meta_timeout="20000" cidr_netmask="32" crm_feature_set="3.0.1" ip="10.5.4.233" nic="vlan1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="301" operation="stop" operation_key="vip-233_stop_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="304" operation="start" operation_key="http-server_start_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="5">
+    <action_set>
+      <rsc_op id="303" operation="monitor" operation_key="vip-233_monitor_30000" on_node="s01-1" on_node_uuid="s01-1">
+        <primitive id="vip-233" long-id="http-server:vip-233" class="ocf" provider="heartbeat" type="IPaddr2"/>
+        <attributes CRM_meta_interval="30000" CRM_meta_name="monitor" CRM_meta_timeout="20000" cidr_netmask="32" crm_feature_set="3.0.1" ip="10.5.4.233" nic="vlan1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="302" operation="start" operation_key="vip-233_start_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="6">
+    <action_set>
+      <pseudo_event id="664" operation="stop" operation_key="nginx_stop_0">
+        <attributes CRM_meta_name="stop" CRM_meta_timeout="90000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <pseudo_event id="306" operation="stop" operation_key="http-server_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="7">
+    <action_set>
+      <pseudo_event id="354" operation="start" operation_key="syslog-server_start_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <pseudo_event id="356" operation="stop" operation_key="syslog-server_stop_0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="357" operation="stopped" operation_key="syslog-server_stopped_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="8">
+    <action_set>
+      <pseudo_event id="355" operation="running" operation_key="syslog-server_running_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="349" operation="start" operation_key="vip-234_start_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="352" operation="start" operation_key="syslog-ng_start_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="354" operation="start" operation_key="syslog-server_start_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="9">
+    <action_set>
+      <pseudo_event id="356" operation="stop" operation_key="syslog-server_stop_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs/>
+  </synapse>
+  <synapse id="10">
+    <action_set>
+      <pseudo_event id="357" operation="stopped" operation_key="syslog-server_stopped_0">
+        <attributes CRM_meta_timeout="20000" crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="348" operation="stop" operation_key="vip-234_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="351" operation="stop" operation_key="syslog-ng_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="356" operation="stop" operation_key="syslog-server_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="11">
+    <action_set>
+      <rsc_op id="348" operation="stop" operation_key="vip-234_stop_0" on_node="s01-1" on_node_uuid="s01-1">
+        <primitive id="vip-234" long-id="syslog-server:vip-234" class="ocf" provider="heartbeat" type="IPaddr2"/>
+        <attributes CRM_meta_timeout="20000" cidr_netmask="32" crm_feature_set="3.0.1" ip="10.5.4.234" nic="vlan1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="351" operation="stop" operation_key="syslog-ng_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="356" operation="stop" operation_key="syslog-server_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="12">
+    <action_set>
+      <rsc_op id="349" operation="start" operation_key="vip-234_start_0" on_node="s01-0" on_node_uuid="s01-0">
+        <primitive id="vip-234" long-id="syslog-server:vip-234" class="ocf" provider="heartbeat" type="IPaddr2"/>
+        <attributes CRM_meta_timeout="20000" cidr_netmask="32" crm_feature_set="3.0.1" ip="10.5.4.234" nic="vlan1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="348" operation="stop" operation_key="vip-234_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="354" operation="start" operation_key="syslog-server_start_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="13">
+    <action_set>
+      <rsc_op id="350" operation="monitor" operation_key="vip-234_monitor_30000" on_node="s01-0" on_node_uuid="s01-0">
+        <primitive id="vip-234" long-id="syslog-server:vip-234" class="ocf" provider="heartbeat" type="IPaddr2"/>
+        <attributes CRM_meta_interval="30000" CRM_meta_name="monitor" CRM_meta_timeout="20000" cidr_netmask="32" crm_feature_set="3.0.1" ip="10.5.4.234" nic="vlan1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="349" operation="start" operation_key="vip-234_start_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="14">
+    <action_set>
+      <rsc_op id="351" operation="stop" operation_key="syslog-ng_stop_0" on_node="s01-1" on_node_uuid="s01-1">
+        <primitive id="syslog-ng" long-id="syslog-server:syslog-ng" class="ocf" provider="heartbeat" type="syslog-ng"/>
+        <attributes CRM_meta_name="stop" CRM_meta_timeout="120000" configfile="/mnt/s01-service/etc/syslog-ng-cluster.conf" crm_feature_set="3.0.1" start_opts="-p /var/run/syslog-ng-cluster.pid"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <pseudo_event id="356" operation="stop" operation_key="syslog-server_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="15">
+    <action_set>
+      <rsc_op id="352" operation="start" operation_key="syslog-ng_start_0" on_node="s01-0" on_node_uuid="s01-0">
+        <primitive id="syslog-ng" long-id="syslog-server:syslog-ng" class="ocf" provider="heartbeat" type="syslog-ng"/>
+        <attributes CRM_meta_name="start" CRM_meta_timeout="90000" configfile="/mnt/s01-service/etc/syslog-ng-cluster.conf" crm_feature_set="3.0.1" start_opts="-p /var/run/syslog-ng-cluster.pid"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="349" operation="start" operation_key="vip-234_start_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="351" operation="stop" operation_key="syslog-ng_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="354" operation="start" operation_key="syslog-server_start_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="16">
+    <action_set>
+      <rsc_op id="353" operation="monitor" operation_key="syslog-ng_monitor_60000" on_node="s01-0" on_node_uuid="s01-0">
+        <primitive id="syslog-ng" long-id="syslog-server:syslog-ng" class="ocf" provider="heartbeat" type="syslog-ng"/>
+        <attributes CRM_meta_interval="60000" CRM_meta_name="monitor" CRM_meta_timeout="60000" configfile="/mnt/s01-service/etc/syslog-ng-cluster.conf" crm_feature_set="3.0.1" start_opts="-p /var/run/syslog-ng-cluster.pid"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="352" operation="start" operation_key="syslog-ng_start_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="17">
+    <action_set>
+      <rsc_op id="621" operation="migrate_to" operation_key="mgmt-vm_migrate_to_0" on_node="s01-0" on_node_uuid="s01-0">
+        <primitive id="mgmt-vm" long-id="mgmt-vm" class="ocf" provider="vds-ok" type="VirtualDomain"/>
+        <attributes CRM_meta_migrate_source="s01-0" CRM_meta_migrate_target="s01-1" CRM_meta_name="stop" CRM_meta_timeout="20000" config="/mnt/vm_meta/mgmt.prague.vds-ok.com.xml" crm_feature_set="3.0.1" hypervisor="qemu:///system" migration_transport="tls" refresh_config="1"/>
+      </rsc_op>
+    </action_set>
+    <inputs/>
+  </synapse>
+  <synapse id="18">
+    <action_set>
+      <rsc_op id="622" operation="migrate_from" operation_key="mgmt-vm_migrate_from_0" on_node="s01-1" on_node_uuid="s01-1">
+        <primitive id="mgmt-vm" long-id="mgmt-vm" class="ocf" provider="vds-ok" type="VirtualDomain"/>
+        <attributes CRM_meta_migrate_source="s01-0" CRM_meta_migrate_source_uuid="s01-0" CRM_meta_migrate_target="s01-1" CRM_meta_name="start" CRM_meta_timeout="20000" config="/mnt/vm_meta/mgmt.prague.vds-ok.com.xml" crm_feature_set="3.0.1" hypervisor="qemu:///system" migration_transport="tls" refresh_config="1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="621" operation="migrate_to" operation_key="mgmt-vm_migrate_to_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="19">
+    <action_set>
+      <rsc_op id="623" operation="monitor" operation_key="mgmt-vm_monitor_10000" on_node="s01-1" on_node_uuid="s01-1">
+        <primitive id="mgmt-vm" long-id="mgmt-vm" class="ocf" provider="vds-ok" type="VirtualDomain"/>
+        <attributes CRM_meta_interval="10000" CRM_meta_name="monitor" CRM_meta_timeout="30000" config="/mnt/vm_meta/mgmt.prague.vds-ok.com.xml" crm_feature_set="3.0.1" hypervisor="qemu:///system" migration_transport="tls" refresh_config="1"/>
+      </rsc_op>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="622" operation="migrate_from" operation_key="mgmt-vm_migrate_from_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+    </inputs>
+  </synapse>
+  <synapse id="20">
+    <action_set>
+      <pseudo_event id="67" operation="all_stopped" operation_key="all_stopped">
+        <attributes crm_feature_set="3.0.1"/>
+      </pseudo_event>
+    </action_set>
+    <inputs>
+      <trigger>
+        <rsc_op id="301" operation="stop" operation_key="vip-233_stop_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="348" operation="stop" operation_key="vip-234_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="351" operation="stop" operation_key="syslog-ng_stop_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="621" operation="migrate_to" operation_key="mgmt-vm_migrate_to_0" on_node="s01-0" on_node_uuid="s01-0"/>
+      </trigger>
+      <trigger>
+        <rsc_op id="622" operation="migrate_from" operation_key="mgmt-vm_migrate_from_0" on_node="s01-1" on_node_uuid="s01-1"/>
+      </trigger>
+      <trigger>
+        <pseudo_event id="664" operation="stop" operation_key="nginx_stop_0"/>
+      </trigger>
+    </inputs>
+  </synapse>
+</transition_graph>
+
