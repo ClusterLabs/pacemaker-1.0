@@ -525,6 +525,9 @@
       <trigger>
         <pseudo_event id="51" operation="stonith_up" operation_key="stonith_up"/>
       </trigger>
+      <trigger>
+        <crm_event id="53" operation="stonith" operation_key="stonith" on_node="sapcl03" on_node_uuid="0bfb78a2-fcd2-4f52-8a06-2d17437a6750"/>
+      </trigger>
     </inputs>
   </synapse>
   <synapse id="34">

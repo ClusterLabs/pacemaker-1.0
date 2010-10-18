@@ -917,6 +917,7 @@ gboolean
 stage6(pe_working_set_t *data_set)
 {
 	action_t *dc_down = NULL;
+	action_t *dc_fence = NULL;
 	action_t *stonith_op = NULL;
 	action_t *last_stonith = NULL;
 	gboolean integrity_lost = FALSE;
@@ -969,6 +970,7 @@ stage6(pe_working_set_t *data_set)
 
 			if(node->details->is_dc) {
 				dc_down = stonith_op;
+				dc_fence = stonith_op;
 
 			} else {
 				if(last_stonith) {
@@ -1039,6 +1041,9 @@ stage6(pe_working_set_t *data_set)
 
 	if(last_stonith) {
 	    order_actions(last_stonith, done, pe_order_implies_right);
+
+	} else if(dc_fence) {
+	    order_actions(dc_down, done, pe_order_implies_right);
 	}
 	order_actions(ready, done, pe_order_optional);
 	return TRUE;
