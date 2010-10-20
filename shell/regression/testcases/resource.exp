@@ -366,7 +366,7 @@ scope=status  name=fail-count-p0 value=0
 </cib>
 
 .TRY resource cleanup p0
-.EXT crm_resource -C -r 'p0' -H 'node1'
+.EXT crm_resource -C -r 'p0'
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
