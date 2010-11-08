@@ -337,7 +337,7 @@ get_resource_meta(const char* rsc_type, const char* provider)
 	}
 	xml_meta_longdesc = (char *)xmlEncodeEntitiesReentrant(NULL, (const unsigned char *)meta_longdesc);
 
-	meta_shortdesc = stonith_get_info(stonith_obj, ST_DEVICENAME);
+	meta_shortdesc = stonith_get_info(stonith_obj, ST_DEVICEID);
 	if (meta_shortdesc == NULL) {
 	    cl_log(LOG_WARNING, "stonithRA plugin: no short description in %s's metadata.", rsc_type);
 	    meta_shortdesc = no_parameter_info;
