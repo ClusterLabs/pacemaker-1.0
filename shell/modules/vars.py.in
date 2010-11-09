@@ -130,5 +130,13 @@ class Vars(Singleton):
     stonithd_metadata = None # stonithd meta data
     pe_metadata = None # PE meta data
     crmd_metadata = None # crmd meta data
+    crm_properties_metadata = None # PE + crmd meta data
+    crmd_advanced = (
+        "dc-version",
+        "cluster-infrastructure",
+        "crmd-integration-timeout",
+        "crmd-finalization-timeout",
+        "expected-quorum-votes",
+    )
 
 # vim:ts=4:sw=4:et:
