@@ -79,7 +79,7 @@ class CtsLab(UserDict):
         self["OutputFile"] = None
         self["SyslogFacility"] = None
         self["CMclass"] = None
-        self["logrestartcmd"] = "/etc/init.d/syslog-ng restart 2>&1 > /dev/null"
+        self["syslogd"] = "syslog-ng"
         self["logger"] = ([StdErrLog(self)])
 
         self.SeedRandom()
@@ -1053,6 +1053,8 @@ class ClusterManager(UserDict):
             return 1
 
         if self.rsh(node, self["StopCmd"]) == 0:
+            # Make sure we can continue even if corosync leaks
+            self.rsh(node, "rm -f /dev/shm/fdata-*")
             self.ShouldBeStatus[node]="down"
             self.cluster_stable(self["DeadTime"])
             return 1

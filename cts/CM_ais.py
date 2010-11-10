@@ -44,10 +44,10 @@ class crm_ais(crm_lha):
         self.update({
             "Name"           : "crm-ais",
 
-            "UUIDQueryCmd"   : "crmadmin -N",
-            "EpocheCmd"      : "crm_node -e",
-            "QuorumCmd"      : "crm_node -q",
-            "ParitionCmd"    : "crm_node -p",
+            "UUIDQueryCmd"   : "crmadmin -N --openais",
+            "EpocheCmd"      : "crm_node -e --openais",
+            "QuorumCmd"      : "crm_node -q --openais",
+            "ParitionCmd"    : "crm_node -p --openais",
 
             "Pat:They_stopped" : "%s crmd:.*Node %s: .* state=lost .new",            
             "Pat:ChildExit"    : "Child process .* exited",
@@ -56,6 +56,7 @@ class crm_ais(crm_lha):
             "BadRegexes"   : (
                 r"ERROR:",
                 r"CRIT:",
+                r"TRACE:",
                 r"Shutting down\.",
                 r"Forcing shutdown\.",
                 r"Timer I_TERMINATE just popped",
@@ -81,6 +82,8 @@ class crm_ais(crm_lha):
                 r"Parameters to .* changed",
                 r"Child process .* terminated with signal 11",
                 r"Executing .* fencing operation",
+                r"ping.*: DEBUG: Updated connected = 0",
+                r"Digest mis-match:",
             ),
         })
 
@@ -92,6 +95,7 @@ class crm_ais(crm_lha):
             return [ 
                 "crm_mon:",
                 "crmadmin:",
+                "update_trace_data",
                 "async_notify: strange, client not found",
                 "ERROR: Message hist queue is filling up"
                 ]
@@ -176,7 +180,7 @@ class crm_ais(crm_lha):
         
         stonith_ignore.extend(self.common_ignore)
         
-        fullcomplist["stonithd"] = Process(self, "stonithd", pats = [
+        fullcomplist["stonithd"] = Process(self, "stonithd", process="stonithd", dc_only=1, pats = [
                 "tengine_stonith_connection_destroy: Fencing daemon connection failed",
                 "Attempting connection to fencing daemon",
                 "te_connect_stonith: Connected",
@@ -189,7 +193,7 @@ class crm_ais(crm_lha):
                     # Processes running under valgrind can't be shot with "killall -9 processname"
                     self.log("Filtering %s from the component list as it is being profiled by valgrind" % key)
                     continue
-            if key == "stonith-ng" and not self.Env["DoFencing"]:
+            if key == "stonithd" and not self.Env["DoFencing"]:
                 continue
                 
             self.complist.append(fullcomplist[key])
@@ -255,8 +259,8 @@ class crm_flatiron(crm_ais):
 
         self.update({
             "Name"           : "crm-flatiron",
-            "StartCmd"       : CTSvars.INITDIR+"/corosync start",
-            "StopCmd"        : CTSvars.INITDIR+"/corosync stop",
+            "StartCmd"       : "service corosync start",
+            "StopCmd"        : "service corosync stop",
 
 # The next pattern is too early
 #            "Pat:We_stopped"   : "%s.*Service engine unloaded: Pacemaker Cluster Manager",
@@ -268,7 +272,6 @@ class crm_flatiron(crm_ais):
             
             "Pat:ChildKilled"  : "%s corosync.*Child process %s terminated with signal 9",
             "Pat:ChildRespawn" : "%s corosync.*Respawning failed child process: %s",
-            "Pat:ChildExit"    : "Child process .* exited",
         })
 
     def Components(self):    

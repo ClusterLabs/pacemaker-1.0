@@ -40,8 +40,7 @@ Add RecourceRecover testcase Zhao Kai <zhaokai@cn.ibm.com>
 
 import time, os, re, types, string, tempfile, sys
 from stat import *
-
-import CTS
+from cts import CTS
 from CTSaudits import *
 
 AllTestClasses = [ ]
@@ -1448,6 +1447,28 @@ class Reattach(CTSTest):
 
         return 1
 
+    def teardown(self, node):
+        
+        # Make sure 'node' is up
+        start = StartTest(self.CM)
+        start(node)
+
+        is_managed = self.CM.rsh(node, "crm_attribute -GQ -t crm_config -n is-managed-default -d true", 1)
+        is_managed = is_managed[:-1] # Strip off the newline
+        if is_managed != "true":
+            self.CM.log("Attempting to re-enable resource management on %s (%s)" % (node, is_managed))
+            managed = self.create_watch(["is-managed-default"], 60)
+            managed.setwatch()
+            
+            self.CM.rsh(node, "crm_attribute -D -n is-managed-default")
+            
+            if not managed.lookforall():
+                self.CM.log("Patterns not found: " + repr(managed.unmatched))
+                self.CM.log("Could not re-enable resource management")
+                return 0
+
+        return 1
+
     def canrunnow(self, node):
         '''Return TRUE if we can meaningfully run right now'''
         if self.find_ocfs2_resources(node):
@@ -1562,14 +1583,17 @@ class SpecialTest1(CTSTest):
         #        Shut down all the nodes...
         ret = self.stopall(None)
         if not ret:
-            return ret
+            return self.failure("Could not stop all nodes")
         #        Start the selected node
         ret = self.restart1(node)
         if not ret:
-            return ret
+            return self.failure("Could not start "+node)
+
         #        Start all remaining nodes
         ret = self.startall(None)
-        return ret
+        if not ret:
+            return self.failure("Could not start the remaining nodes")
+        return self.success()
 
 AllTestClasses.append(SpecialTest1)
 
