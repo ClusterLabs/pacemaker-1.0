@@ -368,10 +368,20 @@ master_score(resource_t *rsc, node_t *node, int not_set_value)
 	    return score;
 	}
 
-	if(rsc->running_on) {
-	    node_t *match = pe_find_node_id(rsc->allowed_nodes, node->details->id);
-	    if(match->weight < 0) {
-		crm_debug_2("%s on %s has score: %d - ignoring master pref",
+	if(node != NULL) {
+	    node_t *match = pe_find_node_id(rsc->running_on, node->details->id);
+	    if(match == NULL) {
+		crm_debug_2("%s is not active on %s - ignoring",
+			    rsc->id, node->details->uname);
+		return score;
+	    }
+	    
+	    match = pe_find_node_id(rsc->allowed_nodes, node->details->id);
+	    if(match == NULL) {
+		return score;
+		
+	    } else if(match->weight < 0) {
+		crm_debug_2("%s on %s has score: %d - ignoring",
 			    rsc->id, match->details->uname, match->weight);
 		return score;
 	    }

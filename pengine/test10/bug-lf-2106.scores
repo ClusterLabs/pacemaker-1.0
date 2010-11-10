@@ -28,7 +28,7 @@ native_color: ssh-bin allocation score on cl-virt-2: 100
 clone_color: ms-itwiki allocation score on cl-virt-1: 50
 clone_color: ms-itwiki allocation score on cl-virt-2: 100
 clone_color: drbd-itwiki:0 allocation score on cl-virt-1: 1
-clone_color: drbd-itwiki:0 allocation score on cl-virt-2: 75
+clone_color: drbd-itwiki:0 allocation score on cl-virt-2: 0
 clone_color: drbd-itwiki:1 allocation score on cl-virt-1: 0
 clone_color: drbd-itwiki:1 allocation score on cl-virt-2: 76
 native_color: drbd-itwiki:1 allocation score on cl-virt-1: 0
@@ -44,7 +44,7 @@ drbd-itwiki:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-bugtrack allocation score on cl-virt-1: 50
 clone_color: ms-bugtrack allocation score on cl-virt-2: 100
 clone_color: drbd-bugtrack:0 allocation score on cl-virt-1: 1
-clone_color: drbd-bugtrack:0 allocation score on cl-virt-2: 75
+clone_color: drbd-bugtrack:0 allocation score on cl-virt-2: 0
 clone_color: drbd-bugtrack:1 allocation score on cl-virt-1: 0
 clone_color: drbd-bugtrack:1 allocation score on cl-virt-2: 76
 native_color: drbd-bugtrack:1 allocation score on cl-virt-1: 0
@@ -60,7 +60,7 @@ drbd-bugtrack:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-servsyslog allocation score on cl-virt-1: 50
 clone_color: ms-servsyslog allocation score on cl-virt-2: 100
 clone_color: drbd-servsyslog:0 allocation score on cl-virt-1: 1
-clone_color: drbd-servsyslog:0 allocation score on cl-virt-2: 75
+clone_color: drbd-servsyslog:0 allocation score on cl-virt-2: 0
 clone_color: drbd-servsyslog:1 allocation score on cl-virt-1: 0
 clone_color: drbd-servsyslog:1 allocation score on cl-virt-2: 76
 native_color: drbd-servsyslog:1 allocation score on cl-virt-1: 0
@@ -76,7 +76,7 @@ drbd-servsyslog:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-smsprod2 allocation score on cl-virt-1: 0
 clone_color: ms-smsprod2 allocation score on cl-virt-2: 150
 clone_color: drbd-smsprod2:0 allocation score on cl-virt-1: 1
-clone_color: drbd-smsprod2:0 allocation score on cl-virt-2: 75
+clone_color: drbd-smsprod2:0 allocation score on cl-virt-2: 0
 clone_color: drbd-smsprod2:1 allocation score on cl-virt-1: 0
 clone_color: drbd-smsprod2:1 allocation score on cl-virt-2: 76
 native_color: drbd-smsprod2:1 allocation score on cl-virt-1: 0
@@ -92,7 +92,7 @@ drbd-smsprod2:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-medomus-cvs allocation score on cl-virt-1: 0
 clone_color: ms-medomus-cvs allocation score on cl-virt-2: 150
 clone_color: drbd-medomus-cvs:0 allocation score on cl-virt-1: 1
-clone_color: drbd-medomus-cvs:0 allocation score on cl-virt-2: 75
+clone_color: drbd-medomus-cvs:0 allocation score on cl-virt-2: 0
 clone_color: drbd-medomus-cvs:1 allocation score on cl-virt-1: 0
 clone_color: drbd-medomus-cvs:1 allocation score on cl-virt-2: 76
 native_color: drbd-medomus-cvs:1 allocation score on cl-virt-1: 0
@@ -108,7 +108,7 @@ drbd-medomus-cvs:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-infotos allocation score on cl-virt-1: 0
 clone_color: ms-infotos allocation score on cl-virt-2: 150
 clone_color: drbd-infotos:0 allocation score on cl-virt-1: 1
-clone_color: drbd-infotos:0 allocation score on cl-virt-2: 75
+clone_color: drbd-infotos:0 allocation score on cl-virt-2: 0
 clone_color: drbd-infotos:1 allocation score on cl-virt-1: 0
 clone_color: drbd-infotos:1 allocation score on cl-virt-2: 76
 native_color: drbd-infotos:1 allocation score on cl-virt-1: 0
