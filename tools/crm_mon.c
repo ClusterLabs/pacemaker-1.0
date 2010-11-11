@@ -748,6 +748,17 @@ static void print_rsc_history(pe_working_set_t *data_set, node_t *node, xmlNode 
     g_list_free(sorted_op_list);
 }
 
+static void get_ping_score(node_t *node, pe_working_set_t *data_set)
+{
+    const char *attr = "pingd";
+    const char *value = NULL;
+    value = g_hash_table_lookup(node->details->attrs, attr);
+
+    if(value != NULL) {
+	print_as(" %s=%s", attr, value);
+    }
+}
+
 static void print_attr_msg(node_t *node, GListPtr rsc_list, const char *attrname, const char *attrvalue)
 {
     slist_iter(rsc, resource_t, rsc_list, lpc2,
@@ -848,6 +859,9 @@ static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 	}
 	
 	print_as("* Node %s: ", crm_element_value(node_state, XML_ATTR_UNAME));
+	if(!print_nodes_attr) {
+	    get_ping_score(node, data_set);
+	}
 	print_as("\n");
 	
 	lrm_rsc = find_xml_node(node_state, XML_CIB_TAG_LRM, FALSE);
