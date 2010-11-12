@@ -1,3 +1,56 @@
+* Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
+- Update source tarball to revision: 4172c2ad2756 (stable-1.0) tip
+- Statistics:
+  Changesets: 75
+  Diff:       146 files changed, 4151 insertions(+), 2135 deletions(-)
+
+- Changes since Pacemaker-1.0.9.1
+  + High: ais: Fix unterminated recursion in init_ais_connection()
+  + High: ais: Move the code for finding uid before the fork so that the child does no logging
+  + High: ais: Never allow quorum plugins to affect connection to the pacemaker plugin
+  + High: Core: Correctly unpack HA_Messages containing multiple entries with the same name
+  + High: crmd: Bug lf#2458 - Ensure stop actions always have the relevant resource attributes
+  + High: crmd: Don't hide stop events that time out - allowing faster recovery in the presence of overloaded hosts
+  + High: crmd: Ensure we activate the DC timer if we detect an alternate DC
+  + High: crmd: Fix assertion failure when performing async resource failures
+  + High: crmd: Fix handling of async resource deletion results
+  + High: crmd: Include the action for crm graph operations
+  + High: crmd: Make sure we always poke the FSA after a transition to clear any TE_HALT actions
+  + High: crmd: Prevent assertion failure for stop actions resulting from cs: 3c0bc17c6daf
+  + High: crmd: Reschedule the PE_START action if its not already running when we try to use it
+  + High: crmd: several fixes for async resource delete (thanks to beekhof)
+  + High: crmd: Use the correct define/size for lrm resource IDs
+  + High: crmd: Use the supplied timeout for stop actions
+  + High: PE: Avoid creating invalid ordering constraints for probes that aren't needed
+  + High: PE: Bug lf#2476 - Repair on-fail=block for groups and primitive resources
+  + High: PE: Correctly handle pseudo action creation
+  + High: PE: Correctly order clone startup after group/clone start
+  + High: PE: Do not demote resources because something that requires it can't run
+  + High: PE: Fix use-after-free in order_actions() reported by valgrind
+  + High: PE: Only update the node's promotion score if the resource is active there
+  + High: PE: Only use the promotion score from the current clone instance
+  + High: PE: Wait until stonith is available, don't fall back to shutdown for nodes requesting termination
+  + High: Tools: Bug lf#2456 - Fix assertion failure in crm_resource
+  + Medium: after signing in with heartbeat, change the heartbeat side ipc send queue len
+  + Medium: cib: Allow backup files to proceed after wrap-around (bnc#630322)
+  + Medium: cib: Bug lf#2469 - Clean up disconnected remote connections
+  + Medium: Core: Enable coredumps properly for MCP and AIS plugin (lf#2463)
+  + Medium: Core: Fix compilation when both heartbeat and corosync are supported
+  + Medium: PE: Ensure resource op timeout takes precedence over op_defaults (lf#2474)
+  + Medium: PE: Fix memory leak when unpacking recurring operations
+  + Medium: PE: Ignore failed actions on nodes that have been shutdown - Patch from Hideo Yamauchi
+  + Medium: Shell: add exit codes for non-interactive use
+  + Medium: Shell: add support for classes to the providers command
+  + Medium: Shell: allow adding force parameter to resource migrate
+  + Medium: Shell: refine the node delete command
+  + Medium: Shell: set shadow directory properly (bnc#626638)
+  + Medium: Shell: test early for duplicate elements in edit (bnc#620460)
+  + Medium: Tools: Bug lf#2477 - Have crm_resource --locate indicate which instances are promoted
+  + Medium: Tools: crm_mon - Display node attributes.  Patch by Yuusuke IIDA
+  + Medium: tools: crm_mon - Enable 'connectivity' mode for 'ping' resources too
+  + Medium: Tools: crm_mon - Only display attributes of online nodes (and sort them)
+  + Medium: tools: Make sure crm_resource waits for the completion of crmd operations it sent
+  + xml: allow upstart primitives in resources.rng
 
 * Wed Jun 23 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9.1-1
 - Update source tarball to revision: c9a5915827d0 (stable-1.0) tip

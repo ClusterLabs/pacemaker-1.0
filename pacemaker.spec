@@ -2,7 +2,7 @@
 %global uname hacluster
 %global pcmk_docdir %{_docdir}/%{name}
 
-%global specversion 1.7
+%global specversion 1
 #global upstream_version 00c6e47d32f3
 %global upstream_prefix pacemaker
 
@@ -273,6 +273,14 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
+* Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
+- Update source tarball to revision: 4172c2ad2756 (stable-1.0) tip
+- Statistics:
+  Changesets: 75
+  Diff:       146 files changed, 4151 insertions(+), 2135 deletions(-)
+
+- See http://hg.clusterlabs.org/pacemaker/stable-1.0/file/tip/ChangeLog for further details
+
 * Wed Jun 23 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9.1-1
 - Update source tarball to revision: c9a5915827d0 (stable-1.0) tip
 - Statistics:
