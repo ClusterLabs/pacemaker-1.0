@@ -46,6 +46,7 @@ do_save=0
 while test "$done" = "0"; do
     case "$1" in
 	-v) verbose=1; shift;;
+	-l|--local) core=`dirname $0`; PATH="$core:$PATH"; shift;;
 	-x) set -x; shift;;
 	-s) do_save=1; shift;;
 	-?) usage 0;;
@@ -166,14 +167,14 @@ function test_tools() {
     assert $? 0 crm_resource "Un-migrate a resource"
  }
 
-test_tools 2>&1 | sed s/cib-last-written.*\>/\>/ > regression.out
+test_tools 2>&1 | sed s/cib-last-written.*\>/\>/ > $core/regression.out
 rc=$?
 
 if [ $do_save = 1 ]; then
-    cp regression.out regression.exp
+    cp $core/regression.out $core/regression.exp
 fi
 
-diff -u regression.exp regression.out 
+diff -u $core/regression.exp $core/regression.out 
 diff_rc=$?
 
 if [ $rc != 0 ]; then
