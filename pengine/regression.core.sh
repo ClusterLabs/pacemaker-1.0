@@ -1,5 +1,3 @@
-#!/bin/bash
-
  # Copyright (C) 2004 Andrew Beekhof <andrew@beekhof.net>
  # 
  # This program is free software; you can redistribute it and/or
@@ -17,82 +15,166 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-verbose=$1
-io_dir=test10
+verbose=0
+num_failed=0
+num_tests=0
+force_local=0
+VALGRIND_CMD=""
 diff_opts="--ignore-all-space -u -N"
-failed=.regression.failed.diff
+
+test_home=`dirname $0`
+test_name=`basename $0`
+
+function info() {
+    printf "$*\n"
+}
+
+function error() {
+    printf "      * ERROR:   $*\n"
+}
+
+function failed() {
+    printf "      * FAILED:  $*\n"
+}
+
+function show_test() {
+    name=$1; shift
+    printf "  Test %-25s $*\n" "$name:"
+}
+
+info "Test home is:\t$test_home"
+test_binary=$test_home/ptest
+
+failed=$test_home/.regression.failed.diff
+
 # zero out the error log
 > $failed
 
-num_failed=0
-function ptest() {
-    if [ "x$VALGRIND_CMD" != "x" ]; then
-	ptest_cmd=`which ptest`
+while true ; do
+    case "$1" in
+	-V|--verbose) verbose=1; shift;;
+	-v|--valgrind) 
+	    export G_SLICE=always-malloc
+	    VALGRIND_CMD="valgrind -q --log-file=%q{valgrind_output} --show-reachable=no --leak-check=full --trace-children=no --time-stamp=yes --num-callers=20 --suppressions=$test_home/ptest.supp"
+	    test_binary=`which ptest`
+	    shift;;
+	--valgrind-dhat) 
+	    VALGRIND_CMD="valgrind --log-file=%q{valgrind_output} --show-top-n=100 --num-callers=4 --time-stamp=yes --trace-children=no --tool=exp-dhat --suppressions=$test_home/ptest.supp"
+	    test_binary=`which ptest`
+	    shift;;
+	--valgrind-skip-output)
+	    VALGRIND_SKIP_OUTPUT=1
+	    shift;;
+	-b|--binary) test_binary=$2; shift; shift;;
+	-?|--help) echo "$0 [--binary name] [--force-local]"; shift; exit 0;;
+	--) shift ; break ;;
+	"") break;;
+	*) echo "unknown option: $1"; exit 1;;
+    esac
+done
 
-    elif [ -x ptest ]; then
-	ptest_cmd=./ptest
+if [ ! -x $test_binary ]; then
+    test_binary=`which ptest`
+fi
 
-    else
-	echo No ptest executable in current directory using installed version
-	ptest_cmd=`which ptest`
-    fi
-    #echo $VALGRIND_CMD $ptest_cmd $*
-    $VALGRIND_CMD $ptest_cmd $*
-}
+if [ "x$test_binary" = "x" ]; then
+    info "ptest not installed. Aborting."
+    exit 1
+fi
+
+info "Test binary is:\t$test_binary"
+if [ "x$VALGRIND_CMD" != "x" ]; then
+    info "Activating memory testing with valgrind";
+fi
+
+info " "
+
+test_cmd="$VALGRIND_CMD $test_binary"
+#echo $test_cmd
+
+if [ `whoami` != root ]; then
+    declare -x CIB_shadow_dir=/tmp
+fi
 
 function do_test {
 
+    did_fail=0
     expected_rc=0
+    num_tests=`expr $num_tests + 1`
 
     base=$1; shift
     name=$1; shift
+
     input=$io_dir/${base}.xml
-    output=$io_dir/${base}.pe.out
+    output=$io_dir/${base}.out
     expected=$io_dir/${base}.exp
-    te_output=$io_dir/${base}.te.out
-    te_expected=$io_dir/${base}.te.exp
-    dot_output=$io_dir/${base}.pe.dot
-    dot_expected=$io_dir/${base}.dot
+
     dot_png=$io_dir/${base}.png
+    dot_expected=$io_dir/${base}.dot
+    dot_output=$io_dir/${base}.pe.dot
+
     scores=$io_dir/${base}.scores
-    score_output=$io_dir/${base}.pe.scores
+    score_output=$io_dir/${base}.scores.pe
+    valgrind_output=$io_dir/${base}.valgrind
+    export valgrind_output
+    stderr_output=$io_dir/${base}.stderr
 
     if [ "x$1" = "x--rc" ]; then
 	expected_rc=$2
 	shift; shift;
     fi
 
+    show_test "$base" "$name"
+
     if [ ! -f $input ]; then
-	echo "Test $name	($base)...	Error (PE : input)";
-	num_failed=`expr $num_failed + 1`
+	error "No input";
+	did_fail=1
+	num_failed=`expr $num_failed + $did_fail`
 	return;
     fi
 
-    echo "Test $base	:	$name";
     if [ "$create_mode" != "true" -a ! -f $expected ]; then
-	echo "	Error (PE : expected)";
+	error "no stored output";
 #	return;
     fi
 
 #    ../admin/crm_verify -X $input
-    ptest -x $input -D $dot_output -G $output -S -s $* > $score_output
+    CIB_shadow_dir=$io_dir $test_cmd -x $input -D $dot_output -G $output -S -s $* 2> $stderr_output > $score_output
     rc=$?
     if [ $rc != $expected_rc ]; then
-	echo "	* Failed (PE : rc=$rc)";
-	num_failed=`expr $num_failed + 1`
+	failed "Test returned: $rc";
+	did_fail=1
+	echo "CIB_shadow_dir=$io_dir $test_cmd -x $input -D $dot_output -G $output -S -s $*"
+    fi
+
+    if [ -z "$VALGRIND_SKIP_OUTPUT" ]; then
+	if [ -s ${valgrind_output} ]; then
+	    error "Valgrind reported errors";
+	    did_fail=1
+	    cat ${valgrind_output}
+	fi
+	rm -f ${valgrind_output}
     fi
 
     if [ -s core ]; then
-	echo "	Moved core to core.${base}";
-	num_failed=`expr $num_failed + 1`
-	rm -f core.$base
-	mv core core.$base
+	error "Core-file detected: core.${base}";
+	did_fail=1
+	rm -f $test_home/core.$base
+	mv core $test_home/core.$base
     fi
 
+    if [ -s $stderr_output ]; then
+	error "Output was written to stderr"
+	did_fail=1
+	cat $stderr_output
+    fi
+    rm -f $stderr_output
+
     if [ ! -s $output ]; then
-	echo "	Error (PE : no graph)";
-	num_failed=`expr $num_failed + 1`
-	rm $output
+	error "No graph produced";
+	did_fail=1
+	num_failed=`expr $num_failed + $did_fail`
+	rm -f $output
 	return;
 #    else
 #	mv $output $output.sed
@@ -100,9 +182,10 @@ function do_test {
     fi
 
     if [ ! -s $dot_output ]; then
-	echo "	Error (PE : no dot-file)";
-	num_failed=`expr $num_failed + 1`
-	rm $output
+	error "No dot-file summary produced";
+	did_fail=1
+	num_failed=`expr $num_failed + $did_fail`
+	rm -f $output
 	return;
     else
 	echo "digraph \"g\" {" > $dot_output.sort
@@ -112,67 +195,68 @@ function do_test {
     fi
 
     if [ ! -s $score_output ]; then
-	echo "	Error (PE : no scores)";
-	num_failed=`expr $num_failed + 1`
+	error "No allocation scores produced";
+	did_fail=1
+	num_failed=`expr $num_failed + $did_fail`
 	rm $output
 	return;
+    else
+	#LC_ALL=POSIX sort $score_output > $score_output.sorted
+	#mv -f $score_output.sorted $score_output
+	touch $score_output
     fi
 
     if [ "$create_mode" = "true" ]; then
 	cp "$output" "$expected"
 	cp "$dot_output" "$dot_expected"
 	cp "$score_output" "$scores"
-	echo "	Created expected output (PE)" 
+	info "	Created expected outputs" 
     fi
 
     diff $diff_opts $dot_expected $dot_output >/dev/null
     rc=$?
     if [ $rc != 0 ]; then
-	echo "	* Failed (PE : dot)";
+	failed "dot-file summary changed";
 	diff $diff_opts $dot_expected $dot_output 2>/dev/null >> $failed
 	echo "" >> $failed
-	num_failed=`expr $num_failed + 1`
+	did_fail=1
     else 
-	rm $dot_output
+	rm -f $dot_output
     fi
 
     diff $diff_opts $expected $output >/dev/null
     rc2=$?
     if [ $rc2 != 0 ]; then
-	echo "	* Failed (PE : raw)";
+	failed "xml-file changed";
 	diff $diff_opts $expected $output 2>/dev/null >> $failed
 	echo "" >> $failed
-	num_failed=`expr $num_failed + 1`
-    else 
-	rm $output
+	did_fail=1
     fi
     
     diff $diff_opts $scores $score_output >/dev/null
     rc=$?
     if [ $rc != 0 ]; then
-	echo "	* Failed (PE : scores)";
+	failed "scores-file changed";
 	diff $diff_opts $scores $score_output 2>/dev/null >> $failed
 	echo "" >> $failed
-	num_failed=`expr $num_failed + 1`
-    else 
-	rm $score_output
+	did_fail=1
     fi
-
-    rm -f $output
+    rm -f $output  $score_output
+    num_failed=`expr $num_failed + $did_fail`
 }
 
 function test_results {
     if [ $num_failed != 0 ]; then
 	if [ -s $failed ]; then
-	    if [ "$verbose" = "-v" ]; then
-		echo "Results of $num_failed failed tests...."
+	    if [ "$verbose" = "1" ]; then
+		error "Results of $num_failed failed tests (out of $num_tests)...."
 		less $failed
 	    else
-		echo "Results of $num_failed failed tests are in $failed...."
-		echo "Use $0 -v to display them automatically."
+		error "Results of $num_failed failed tests (out of $num_tests) are in $failed...."
+		error "Use $0 -V to display them automatically."
 	    fi
 	else
-	    echo "$num_failed tests failed (no diff results)"
+	    error "$num_failed (of $num_tests) tests failed (no diff results)"
 	    rm $failed
 	fi
     fi

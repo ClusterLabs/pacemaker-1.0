@@ -16,19 +16,19 @@
  # License along with this library; if not, write to the Free Software
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
-if [ -x /usr/bin/valgrind ]; then
-    export G_SLICE=always-malloc
-#    VALGRIND_CMD="valgrind -q --show-reachable=no --leak-check=full --trace-children=no --time-stamp=yes --num-callers=20 --suppressions=./ptest.supp"
-fi
 
-. regression.core.sh
+core=`dirname $0`
+. $core/regression.core.sh
+io_dir=$test_home/test10
+
 create_mode="true"
-echo Generating test outputs for these tests...
+info Generating test outputs for these tests...
 # do_test file description
-echo Done.
+
+info Done.
 echo ""
 
-echo Performing the following tests...
+info Performing the following tests from $io_dir
 create_mode="false"
 
 echo ""
