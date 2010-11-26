@@ -718,6 +718,8 @@ class CibObject(object):
         if not oldnode:
             if self.obj_type == "property":
                 oldnode = cib_factory.topnode[cib_object_map[self.xml_obj_type][2]]
+            elif self.xml_obj_type in vars.defaults_tags:
+                oldnode = self.node.parentNode
             else:
                 oldnode = self.node
         return self.cli_list2node(cli_list,oldnode)
