@@ -1050,6 +1050,7 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 	gboolean rc;
 	common_op_t * op = NULL;
 	int * original_key = NULL;
+	int ra_exitcode = exitcode;
 
 	stonithd_log2(LOG_DEBUG, "stonithdProcessDied: begin"); 
 	stonithd_child_count--;
@@ -1066,6 +1067,7 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 		goto done;
 	}
 	if( signo ) {
+		ra_exitcode = EXECRA_EXEC_UNKNOWN_ERROR;
 		if( proctrack_timedout(p) ) {
 			stonithd_log(LOG_WARNING,
 				"A STONITH operation timed out."); 
@@ -1075,7 +1077,7 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 	}
 	if( valid_op(op) ) {
 		if( op->scenario == STONITH_RA_OP ) {
-			handleRA_finished_op(op, proctrack_pid(p), exitcode);
+			handleRA_finished_op(op, proctrack_pid(p), ra_exitcode);
 		} else {
 			handle_finished_op(op, proctrack_pid(p), exitcode);
 		}
