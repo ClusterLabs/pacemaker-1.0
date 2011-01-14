@@ -728,6 +728,10 @@ unpack_order_set(xmlNode *set, int score,
 	set, xml_rsc, XML_TAG_RESOURCE_REF,
 
 	resource = pe_find_resource(data_set->resources, ID(xml_rsc));
+	if(!resource) {
+	    crm_config_err("%s: No resource found for %s", id, ID(xml_rsc));
+	    continue;
+	}
 
 	key = generate_op_key(resource->id, action, 0);
 	custom_action_order(NULL, NULL, *begin, resource, key, NULL,
@@ -771,6 +775,13 @@ unpack_order_set(xmlNode *set, int score,
 	set, xml_rsc, XML_TAG_RESOURCE_REF,
 
 	resource = pe_find_resource(data_set->resources, ID(xml_rsc));
+	if(!resource) {
+	    /* just skip here to avoid duplicate error logs.
+	     * the error has already been logged in the previous iteration.
+	    crm_config_err("%s: No resource found for %s", id, ID(xml_rsc));
+	    */
+	    continue;
+	}
 
 	key = generate_op_key(resource->id, action, 0);
 	custom_action_order(NULL, NULL, *inv_begin, resource, key, NULL,
