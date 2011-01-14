@@ -36,6 +36,14 @@
 #include <crm/pengine/rules.h>
 #include <lib/pengine/utils.h>
 
+#define EXPAND_CONSTRAINT_IDREF(__set, __rsc, __name) do {				\
+	__rsc = pe_find_resource(data_set->resources, __name);		\
+	if(__rsc == NULL) {						\
+	    crm_config_err("%s: No resource found for %s", __set, __name); \
+	    return FALSE;						\
+	}								\
+    } while(0)
+
 gboolean 
 unpack_constraints(xmlNode * xml_constraints, pe_working_set_t *data_set)
 {
@@ -727,11 +735,7 @@ unpack_order_set(xmlNode *set, int score,
     xml_child_iter_filter(
 	set, xml_rsc, XML_TAG_RESOURCE_REF,
 
-	resource = pe_find_resource(data_set->resources, ID(xml_rsc));
-	if(!resource) {
-	    crm_config_err("%s: No resource found for %s", id, ID(xml_rsc));
-	    continue;
-	}
+	EXPAND_CONSTRAINT_IDREF(id, resource, ID(xml_rsc));
 
 	key = generate_op_key(resource->id, action, 0);
 	custom_action_order(NULL, NULL, *begin, resource, key, NULL,
@@ -774,14 +778,7 @@ unpack_order_set(xmlNode *set, int score,
     xml_child_iter_filter(
 	set, xml_rsc, XML_TAG_RESOURCE_REF,
 
-	resource = pe_find_resource(data_set->resources, ID(xml_rsc));
-	if(!resource) {
-	    /* just skip here to avoid duplicate error logs.
-	     * the error has already been logged in the previous iteration.
-	    crm_config_err("%s: No resource found for %s", id, ID(xml_rsc));
-	    */
-	    continue;
-	}
+	EXPAND_CONSTRAINT_IDREF(id, resource, ID(xml_rsc));
 
 	key = generate_op_key(resource->id, action, 0);
 	custom_action_order(NULL, NULL, *inv_begin, resource, key, NULL,
@@ -822,7 +819,7 @@ static gboolean order_rsc_sets(
 	/* get the first one */
 	xml_child_iter_filter(
 	    set1, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_1 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_1, ID(xml_rsc));
 	    break;
 	    );
     }
@@ -834,7 +831,7 @@ static gboolean order_rsc_sets(
 	    set2, xml_rsc, XML_TAG_RESOURCE_REF,
 	    rid = ID(xml_rsc);
 	    );
-	rsc_2 = pe_find_resource(data_set->resources, rid);
+	EXPAND_CONSTRAINT_IDREF(id, rsc_2, rid);
     }
 
     if(rsc_1 != NULL && rsc_2 != NULL) {
@@ -843,25 +840,25 @@ static gboolean order_rsc_sets(
     } else if(rsc_1 != NULL) {
 	xml_child_iter_filter(
 	    set2, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_2 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_2, ID(xml_rsc));
 	    new_rsc_order(rsc_1, action_1, rsc_2, action_2, flags, data_set);
 	    );
 
     } else if(rsc_2 != NULL) {
 	xml_child_iter_filter(
 	    set1, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_1 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_1, ID(xml_rsc));
 	    new_rsc_order(rsc_1, action_1, rsc_2, action_2, flags, data_set);
 	    );
 
     } else {
 	xml_child_iter_filter(
 	    set1, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_1 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_1, ID(xml_rsc));
 
 	    xml_child_iter_filter(
 		set2, xml_rsc_2, XML_TAG_RESOURCE_REF,
-		rsc_2 = pe_find_resource(data_set->resources, ID(xml_rsc_2));
+		EXPAND_CONSTRAINT_IDREF(id, rsc_2, ID(xml_rsc_2));
 		new_rsc_order(rsc_1, action_1, rsc_2, action_2, flags, data_set);
 		);
 	    );
@@ -964,7 +961,7 @@ unpack_colocation_set(xmlNode *set, int score, pe_working_set_t *data_set)
 	xml_child_iter_filter(
 	    set, xml_rsc, XML_TAG_RESOURCE_REF,
 	    
-	    resource = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(set_id, resource, ID(xml_rsc));
 	    if(with != NULL) {
 		crm_debug_2("Colocating %s with %s", resource->id, with->id);
 		rsc_colocation_new(set_id, NULL, local_score, resource, with, role, role, data_set);
@@ -983,14 +980,14 @@ unpack_colocation_set(xmlNode *set, int score, pe_working_set_t *data_set)
 	xml_child_iter_filter(
 	    set, xml_rsc, XML_TAG_RESOURCE_REF,
 	    
-	    resource = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(set_id, resource, ID(xml_rsc));
 
 	    xml_child_iter_filter(
 		set, xml_rsc_with, XML_TAG_RESOURCE_REF,
 		if(safe_str_eq(resource->id, ID(xml_rsc_with))) {
 		    break;
 		}
-		with = pe_find_resource(data_set->resources, ID(xml_rsc_with));
+		EXPAND_CONSTRAINT_IDREF(set_id, with, ID(xml_rsc_with));
 		crm_debug_2("Anti-Colocating %s with %s", resource->id, with->id);
 		rsc_colocation_new(set_id, NULL, local_score, resource, with, role, role, data_set);
 		);
@@ -999,8 +996,6 @@ unpack_colocation_set(xmlNode *set, int score, pe_working_set_t *data_set)
     
     return TRUE;
 }
-
-	    
 
 static gboolean colocate_rsc_sets(
     const char *id, xmlNode *set1, xmlNode *set2, int score, pe_working_set_t *data_set)
@@ -1018,7 +1013,7 @@ static gboolean colocate_rsc_sets(
 	/* get the first one */
 	xml_child_iter_filter(
 	    set1, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_1 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_1, ID(xml_rsc));
 	    break;
 	    );
     }
@@ -1030,7 +1025,7 @@ static gboolean colocate_rsc_sets(
 	    set2, xml_rsc, XML_TAG_RESOURCE_REF,
 	    rid = ID(xml_rsc);
 	    );
-	rsc_2 = pe_find_resource(data_set->resources, rid);
+	EXPAND_CONSTRAINT_IDREF(id, rsc_2, rid);
     }
 
     if(rsc_1 != NULL && rsc_2 != NULL) {
@@ -1039,25 +1034,25 @@ static gboolean colocate_rsc_sets(
     } else if(rsc_1 != NULL) {
 	xml_child_iter_filter(
 	    set2, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_2 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_2, ID(xml_rsc));
 	    rsc_colocation_new(id, NULL, score, rsc_1, rsc_2, role_1, role_2, data_set);
 	    );
 
     } else if(rsc_2 != NULL) {
 	xml_child_iter_filter(
 	    set1, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_1 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_1, ID(xml_rsc));
 	    rsc_colocation_new(id, NULL, score, rsc_1, rsc_2, role_1, role_2, data_set);
 	    );
 
     } else {
 	xml_child_iter_filter(
 	    set1, xml_rsc, XML_TAG_RESOURCE_REF,
-	    rsc_1 = pe_find_resource(data_set->resources, ID(xml_rsc));
+	    EXPAND_CONSTRAINT_IDREF(id, rsc_1, ID(xml_rsc));
 
 	    xml_child_iter_filter(
 		set2, xml_rsc_2, XML_TAG_RESOURCE_REF,
-		rsc_2 = pe_find_resource(data_set->resources, ID(xml_rsc_2));
+		EXPAND_CONSTRAINT_IDREF(id, rsc_2, ID(xml_rsc_2));
 		rsc_colocation_new(id, NULL, score, rsc_1, rsc_2, role_1, role_2, data_set);
 		);
 	    );
