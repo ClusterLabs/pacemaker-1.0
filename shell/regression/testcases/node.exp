@@ -12,8 +12,6 @@ node1: normal
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -35,8 +33,6 @@ node1: normal
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -58,8 +54,6 @@ node1: normal
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -83,8 +77,6 @@ scope=nodes  name=a1 value=1 2 3
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -109,8 +101,6 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -132,8 +122,6 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -156,8 +144,6 @@ scope=status  name=s1 value=(null)
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
@@ -179,8 +165,6 @@ scope=status  name=s1 value=(null)
 <cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
     <crm_config/>
-    <rsc_defaults/>
-    <op_defaults/>
     <nodes>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="nodes-node1">
