@@ -75,12 +75,10 @@ BuildRequires:  lm_sensors-devel
 
 %if %{with esmtp}
 BuildRequires:	libesmtp-devel
-Requires:	libesmtp
 %endif
 
 %if %{with snmp}
 BuildRequires:	net-snmp-devel
-Requires:	net-snmp
 %endif
 
 %if %{with ais}
@@ -155,10 +153,10 @@ resource health.
 
 # RHEL <= 5 does not support --docdir
 docdir=%{pcmk_docdir} %{configure} \
-	%{?_without_heartbeat} \
-	%{?_without_ais} \
-	%{?_without_esmtp} \
-	%{?_without_snmp} \
+	%{!?with_heartbeat: --without-heartbeat}	\
+	%{!?with_ais:       --without-ais}		\
+	%{!?with_esmtp:     --without-esmtp}		\
+	%{!?with_snmp:      --without-snmp}		\
 	--localstatedir=%{_var} \
 	--enable-fatal-warnings=no
 make %{_smp_mflags} docdir=%{pcmk_docdir}
