@@ -299,10 +299,12 @@ static void master_promotion_order(resource_t *rsc)
 	 * master instance should/must be colocated with
 	 */
 	if(constraint->role_lh == RSC_ROLE_MASTER) {
+	    set_bit(rsc->flags, pe_rsc_merging);
 	    crm_debug_2("RHS: %s with %s: %d", constraint->rsc_lh->id, constraint->rsc_rh->id, constraint->score);
 	    rsc->allowed_nodes = constraint->rsc_rh->cmds->merge_weights(
 		constraint->rsc_rh, rsc->id, rsc->allowed_nodes,
 		constraint->node_attribute, constraint->score/INFINITY, constraint->score==INFINITY?FALSE:TRUE);
+	    clear_bit(rsc->flags, pe_rsc_merging);
 	}
 	);
     
@@ -312,10 +314,12 @@ static void master_promotion_order(resource_t *rsc)
 	 * colocated with the master instance
 	 */
 	if(constraint->role_rh == RSC_ROLE_MASTER) {
+	    set_bit(rsc->flags, pe_rsc_merging);
 	    crm_debug_2("LHS: %s with %s: %d", constraint->rsc_lh->id, constraint->rsc_rh->id, constraint->score);
 	    rsc->allowed_nodes = rsc_merge_weights(
 		constraint->rsc_lh, rsc->id, rsc->allowed_nodes,
 		constraint->node_attribute, constraint->score/INFINITY, TRUE, TRUE);
+	    clear_bit(rsc->flags, pe_rsc_merging);
 	}
 	);
 
