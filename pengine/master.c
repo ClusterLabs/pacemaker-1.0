@@ -269,6 +269,8 @@ static void master_promotion_order(resource_t *rsc)
     }
     clone_data->merged_master_weights = TRUE;
     crm_debug_2("Merging weights for %s", rsc->id);
+    set_bit(rsc->flags, pe_rsc_merging);
+
     slist_iter(
 	child, resource_t, rsc->children, lpc,
 	crm_debug_2("%s: %d", child->id, child->sort_index);
@@ -345,6 +347,7 @@ static void master_promotion_order(resource_t *rsc)
 	);
 
     rsc->children = g_list_sort(rsc->children, sort_master_instance);
+    clear_bit(rsc->flags, pe_rsc_merging);
 }
 
 int
