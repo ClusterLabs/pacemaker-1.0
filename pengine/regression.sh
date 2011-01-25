@@ -110,6 +110,7 @@ do_test coloc-attr "Colocation based on node attributes"
 do_test coloc-negative-group "Negative colocation with a group"
 do_test coloc-intra-set "Intra-set colocation"
 do_test bug-lf-2435 "Colocation sets with a negative score"
+do_test bug-lf-2508 "Correctly reconstruct the status of anonymous cloned groups" 
 
 #echo ""
 #do_test agent1 "version: lt (empty)"
