@@ -112,6 +112,7 @@ do_test coloc-negative-group "Negative colocation with a group"
 do_test coloc-intra-set "Intra-set colocation"
 do_test bug-lf-2435 "Colocation sets with a negative score"
 do_test bug-lf-2508 "Correctly reconstruct the status of anonymous cloned groups" 
+do_test bug-lf-2544 "Balanced clone placement"
 
 #echo ""
 #do_test agent1 "version: lt (empty)"
