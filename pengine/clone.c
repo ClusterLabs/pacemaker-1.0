@@ -89,7 +89,6 @@ gint sort_clone_instance(gconstpointer a, gconstpointer b)
 	 *  - inactive instances
 	 */	
 
-	do_crm_log_unlikely(level+1, "%s ? %s", resource1->id, resource2->id);
 	if(resource1->running_on && resource2->running_on) {
 		if(g_list_length(resource1->running_on) < g_list_length(resource2->running_on)) {
 			do_crm_log_unlikely(level, "%s < %s: running_on", resource1->id, resource2->id);
@@ -200,7 +199,24 @@ gint sort_clone_instance(gconstpointer a, gconstpointer b)
 	    int lpc = 0;
 	    GListPtr list1 = node_list_dup(resource1->allowed_nodes, FALSE, FALSE);
 	    GListPtr list2 = node_list_dup(resource2->allowed_nodes, FALSE, FALSE);
-	    
+
+	    /* Current score */
+	    node1 = g_list_nth_data(resource1->running_on, 0);
+	    node1 = pe_find_node_id(list1, node1->details->id);
+
+	    node2 = g_list_nth_data(resource2->running_on, 0);
+	    node2 = pe_find_node_id(list2, node2->details->id);
+
+	    if(node1->weight < node2->weight) {
+		do_crm_log_unlikely(level, "%s < %s: current score", resource1->id, resource2->id);
+		return 1;
+
+	    } else if(node1->weight > node2->weight) {
+		do_crm_log_unlikely(level, "%s > %s: current score", resource1->id, resource2->id);
+		return -1;
+	    }
+
+	    /* All scores */
 	    list1 = g_list_sort(list1, sort_node_weight);
 	    list2 = g_list_sort(list2, sort_node_weight);
 	    max = g_list_length(list1);
