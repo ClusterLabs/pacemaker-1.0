@@ -124,6 +124,27 @@ invert_action(const char *action)
 }
 
 static gboolean
+contains_stonith(resource_t *rsc)
+{
+    GListPtr gIter = rsc->children;
+
+    if(gIter == FALSE) {
+	const char *class = crm_element_value(rsc->xml, XML_AGENT_ATTR_CLASS);
+	if(safe_str_eq(class, "stonith")) {
+	    return TRUE;
+	}
+    }
+    
+    for(; gIter != NULL; gIter = gIter->next) {
+	resource_t *child = (resource_t*)gIter->data;
+	if(contains_stonith(child)) {
+	    return TRUE;
+	}
+    }
+    return FALSE;
+}
+
+static gboolean
 unpack_simple_rsc_order(xmlNode * xml_obj, pe_working_set_t *data_set)
 {
 	int score_i = 0;
@@ -191,7 +212,15 @@ unpack_simple_rsc_order(xmlNode * xml_obj, pe_working_set_t *data_set)
 	} else if(score == NULL) {
 	    score = "INFINITY";
 	}
-	
+
+	if(safe_str_eq(action_first, RSC_STOP) && contains_stonith(rsc_then)) {
+		if(contains_stonith(rsc_first) == FALSE) {
+			crm_config_err("Constraint %s: Ordering STONITH resource (%s) to stop before %s is illegal",
+				   id, rsc_first->id, rsc_then->id);
+		}
+		return FALSE;
+	}
+
 	score_i = char2score(score);
 	cons_weight = pe_order_optional;
 	if(score_i == 0 && rsc_then->restart_type == pe_restart_restart) {
@@ -226,6 +255,14 @@ unpack_simple_rsc_order(xmlNode * xml_obj, pe_working_set_t *data_set)
 	
 	action_then = invert_action(action_then);
 	action_first = invert_action(action_first);
+
+	if(safe_str_eq(action_first, RSC_STOP) && contains_stonith(rsc_then)) {
+	    if(contains_stonith(rsc_first) == FALSE) {
+		crm_config_err("Constraint %s: Ordering STONITH resource (%s) to stop before %s is illegal",
+		       id, rsc_first->id, rsc_then->id);
+	    }
+	    return FALSE;
+	}
 
 	cons_weight = pe_order_optional;
 	if(score_i == 0 && rsc_then->restart_type == pe_restart_restart) {
