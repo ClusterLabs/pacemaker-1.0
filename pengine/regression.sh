@@ -99,6 +99,7 @@ do_test bug-lf-2171 "Prevent group start when clone is stopped"
 do_test order-clone "Clone ordering should be able to prevent startup of dependant clones"
 do_test order-sets "Ordering for resource sets"
 do_test clone-order-primitive "Order clone start after a primitive"
+do_test bug-lf-2493 "Don't imply colocation requirements when applying ordering constraints with clones"
 
 echo ""
 do_test coloc-loop "Colocation - loop"
