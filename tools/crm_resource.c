@@ -143,15 +143,26 @@ resource_ipc_callback(IPC_Channel * server, void *private_data)
 }
 
 static int
-do_find_resource(const char *rsc, pe_working_set_t *data_set)
+do_find_resource(const char *rsc, resource_t *the_rsc, pe_working_set_t *data_set)
 {
 	int found = 0;
-	resource_t *the_rsc = pe_find_resource(data_set->resources, rsc);
+
+	if(the_rsc == NULL) {
+		the_rsc = pe_find_resource(data_set->resources, rsc);
+    	}
 
 	if(the_rsc == NULL) {
 		return cib_NOTEXISTS;
 	}
 
+	if(the_rsc->variant > pe_clone) {
+	    GListPtr gIter = the_rsc->children;
+	    for(; gIter != NULL; gIter = gIter->next) {
+		found += do_find_resource(rsc, gIter->data, data_set);
+	    }
+	    return found;
+	}
+    
 	slist_iter(node, node_t, the_rsc->running_on, lpc,
 		   crm_debug_3("resource %s is running on: %s",
 			       rsc, node->details->uname);
@@ -1383,7 +1394,7 @@ main(int argc, char **argv)
 			CMD_ERR("Must supply a resource id with -r\n");
 			return cib_NOTEXISTS;
 		} 
-		rc = do_find_resource(rsc_id, &data_set);
+	rc = do_find_resource(rsc_id, NULL, &data_set);
 		
 	} else if(rsc_cmd == 'q') {
 		if(rsc_id == NULL) {
