@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "all_stopped" [ style=bold color="green" fontcolor="orange"  ]
 "ima_cloneid_stop_0" -> "ima_cloneid_stopped_0" [ style = bold]
 "ima_cloneid_stop_0" -> "ima_rscid:0_stop_0 hb1" [ style = bold]

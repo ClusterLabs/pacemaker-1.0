@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "all_stopped" -> "stonithclone:1_stop_0 node1" [ style = bold]
 "all_stopped" [ style=bold color="green" fontcolor="orange"  ]
 "configstoreclone:0_post_notify_stop_0 node2" -> "configstorecloneset_confirmed-post_notify_stopped_0" [ style = bold]

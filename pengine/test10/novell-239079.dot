@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "drbd0:0_post_notify_start_0 xen-2" -> "ms-drbd0_confirmed-post_notify_running_0" [ style = bold]
 "drbd0:0_post_notify_start_0 xen-2" [ style=bold color="green" fontcolor="black"  ]
 "drbd0:0_start_0 xen-2" -> "ms-drbd0_running_0" [ style = bold]

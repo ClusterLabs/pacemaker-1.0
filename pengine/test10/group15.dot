@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "all_stopped" [ style=bold color="green" fontcolor="orange"  ]
 "bar_running_0" [ style=bold color="green" fontcolor="orange"  ]
 "bar_start_0" -> "bar_running_0" [ style = bold]

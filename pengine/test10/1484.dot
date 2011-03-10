@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "all_stopped" [ style=bold color="green" fontcolor="orange"  ]
 "the-future-of-vaj_start_0 <none>" [ style=dashed color="red" fontcolor="black"  ]
 "the-future-of-vaj_stop_0 hb2" -> "all_stopped" [ style = bold]

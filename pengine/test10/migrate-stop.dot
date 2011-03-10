@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "all_stopped" [ style=bold color="green" fontcolor="orange"  ]
 "clone-dom0-iscsi1_stop_0" -> "clone-dom0-iscsi1_stopped_0" [ style = bold]
 "clone-dom0-iscsi1_stop_0" -> "dom0-iscsi1:0_stop_0" [ style = bold]

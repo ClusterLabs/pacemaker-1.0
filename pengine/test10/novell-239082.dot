@@ -1,4 +1,4 @@
- digraph "g" {
+digraph "g" {
 "all_stopped" [ style=bold color="green" fontcolor="orange"  ]
 "do_shutdown xen-1" [ style=bold color="green" fontcolor="black"  ]
 "drbd0:0_post_notify_demote_0 xen-2" -> "ms-drbd0_confirmed-post_notify_demoted_0" [ style = bold]
