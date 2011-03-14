@@ -1475,6 +1475,7 @@ tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb2openais.sh					\
 	tools/crm_primitive.py					\
+	tools/crm_report					\
 	shell/Makefile						\
 	shell/templates/Makefile						\
 	shell/regression/Makefile						\
