@@ -21,13 +21,11 @@
 PACKAGE		?= pacemaker
 
 # Force 'make dist' to be consistent with 'make export' 
-#distdir		= $(PACKAGE)-$(VERSION)
-distdir			= $(PACKAGE)
+distdir			= $(PACKAGE)-$(TAG)
 TARFILE			= $(distdir).tar.bz2
 DIST_ARCHIVES		= $(TARFILE)
 
-LAST_RELEASE		= Pacemaker-1.0.9.1
-STABLE_SERIES		= stable-1.0
+LAST_RELEASE		= $(firstword $(shell hg tags| grep Pacemaker | head -n 1))
 
 RPM_ROOT	= $(shell pwd)
 RPM_OPTS	= --define "_sourcedir $(RPM_ROOT)" 	\
@@ -40,24 +38,35 @@ RPM_OPTS	= --define "_sourcedir $(RPM_ROOT)" 	\
 # RHEL:     /etc/redhat-release
 # Fedora:   /etc/fedora-release, /etc/redhat-release, /etc/system-release
 getdistro = $(shell test -e /etc/SuSE-release || echo fedora; test -e /etc/SuSE-release && echo suse)
-DISTRO ?= $(call getdistro)
-TAG    ?= tip
+PROFILE ?= $(shell rpm --eval fedora-%{fedora}-%{_arch})
+DISTRO  ?= $(call getdistro)
+TAG     ?= $(firstword $(shell hg id -i | tr '+' ' '))
+WITH    ?= 
 
-export:
-	rm -f $(TARFILE)
-	hg archive -t tbz2 -r $(TAG) $(TARFILE)
-	echo `date`: Rebuilt $(TARFILE) from $(TAG)
+initialize:
+	./autogen.sh
+	echo "Now run configure with any arguments (eg. --prefix) specific to your system"
 
-pacemaker-fedora.spec: pacemaker.spec
-	cp $(PACKAGE).spec $(PACKAGE)-$(DISTRO).spec
-	@echo Rebuilt $@
+export: 
+	rm -f $(PACKAGE)-scratch.tar.* $(PACKAGE)-tip.tar.*
+	if [ ! -f $(TARFILE) ]; then						\
+	    if [ $(TAG) = scratch ]; then 					\
+		hg commit -m "DO-NOT-PUSH";					\
+		hg archive --prefix $(distdir) -t tbz2 -r tip $(TARFILE);	\
+		hg rollback; 							\
+	    else								\
+		hg archive --prefix $(distdir) -t tbz2 -r $(TAG) $(TARFILE);	\
+	    fi;									\
+	    echo `date`: Rebuilt $(TARFILE);					\
+	else									\
+	    echo `date`: Using existing tarball: $(TARFILE);			\
+	fi
 
-pacemaker-epel.spec: pacemaker.spec
-	cp $(PACKAGE).spec $(PACKAGE)-$(DISTRO).spec
-	@echo Rebuilt $@
+$(PACKAGE)-opensuse.spec: $(PACKAGE)-suse.spec
 
-pacemaker-suse.spec: pacemaker.spec
-	cp $(PACKAGE).spec $@
+$(PACKAGE)-suse.spec: $(PACKAGE).spec.in
+	rm -f $@
+	cp $(PACKAGE).spec.in $@
 	sed -i.sed s:%{_docdir}/%{name}:%{_docdir}/%{name}-%{version}:g $@
 	sed -i.sed s:corosynclib:libcorosync:g $@
 	sed -i.sed s:pacemaker-libs:libpacemaker3:g $@
@@ -68,25 +77,41 @@ pacemaker-suse.spec: pacemaker.spec
 	sed -i.sed s:bzip2-devel:libbz2-devel:g $@
 	sed -i.sed s:Development/Libraries:Development/Libraries/C\ and\ C++:g $@
 	sed -i.sed s:System\ Environment/Daemons:Productivity/Clustering/HA:g $@
+	sed -i.sed s:bcond_without\ publican:bcond_with\ publican:g $@
 	sed -i.sed s:\#global\ py_sitedir:\%global\ py_sitedir:g $@
+	sed -i.sed s:docbook-style-xsl:docbook-xsl-stylesheets:g $@
 	@echo Rebuilt $@
 
-srpm:	export $(PACKAGE)-$(DISTRO).spec
-	rm -f *.src.rpm
-	rpmbuild -bs --define "dist .$(DISTRO)" $(RPM_OPTS) $(PACKAGE)-$(DISTRO).spec
+#sed -i.sed 's/global\ specversion.*/global\ specversion\ $(shell expr 1 + $(lastword $(shell grep "global specversion" $(VARIANT)$(PACKAGE).spec)))/' $(PACKAGE)-$(DISTRO).spec
+
+# Works for all fedora based distros
+$(PACKAGE)-%.spec: $(PACKAGE).spec.in
+	rm -f $@
+	cp $(PACKAGE).spec.in $(PACKAGE)-$*.spec
+	@echo Rebuilt $@
+
+srpm-%:	export $(PACKAGE)-%.spec
+	rm -f *.src.rpm $(PACKAGE).spec
+	cp $(PACKAGE)-$*.spec $(PACKAGE).spec
+	sed -i.sed 's/global\ upstream_version.*/global\ upstream_version\ $(TAG)/' $(PACKAGE).spec
+	rpmbuild -bs --define "dist .$*" $(RPM_OPTS) $(PACKAGE).spec
+
+# eg. WITH="--with cman" make rpm
+mock-%: 
+	make srpm-$(firstword $(shell echo $(@:mock-%=%) | tr '-' ' '))
+	-rm -rf $(RPM_ROOT)/mock
+	mock --root=$* --resultdir=$(RPM_ROOT)/mock --rebuild $(WITH) $(RPM_ROOT)/*.src.rpm
+
+srpm:	srpm-$(DISTRO)
+
+mock:   mock-$(PROFILE)
 
 rpm:	srpm
-	@echo To create custom builds, edit the flags and options in $(PACKAGE)-$(DISTRO).spec first
-	rpmbuild --rebuild $(RPM_ROOT)/*.src.rpm
-
-mock:   srpm
-	-rm -rf $(RPM_ROOT)/mock
-	mock --root=fedora-12-x86_64 --resultdir=$(RPM_ROOT)/mock --rebuild $(RPM_ROOT)/*.src.rpm
+	@echo To create custom builds, edit the flags and options in $(PACKAGE).spec first
+	rpmbuild $(RPM_OPTS) $(WITH) --rebuild $(RPM_ROOT)/*.src.rpm
 
 scratch:
-	hg commit -m "DO-NOT-PUSH"
-	make mock
-	hg rollback
+	make TAG=scratch mock
 
 deb:	
 	echo To make create custom builds, edit the configure flags in debian/rules first
@@ -99,7 +124,7 @@ global-html: global
 	htags -sanhIT
 
 global-www: global-html
-	rsync -avzxlSD --progress HTML/ root@clusterlabs.org:/var/lib/global/pacemaker
+	rsync -avzxlSD --progress HTML/ root@www.clusterlabs.org:/var/lib/global/$(PACKAGE)
 
 changes:
 	@printf "\n* `date +"%a %b %d %Y"` `hg showconfig ui.username` $(VERSION)-1"
