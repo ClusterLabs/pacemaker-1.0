@@ -482,10 +482,11 @@ class CIB10(CibBase):
         # Ping the test master
         # Use the IP where possible to avoid name lookup failures  
         ourself = socket.gethostname()
-        for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+        for ip in socket.gethostbyname_ex(ourself)[2]:
             if ip != "127.0.0.1":
                 ourself = ip
                 break
+        self.CM.log("Using %s for testing connectivity" % ourself)
         self._create('''primitive ping-1 ocf:pacemaker:ping params host_list=%s name=connected debug=true op monitor interval=60s''' % ourself)
         self._create('''clone Connectivity ping-1 meta globally-unique=false''')
 
