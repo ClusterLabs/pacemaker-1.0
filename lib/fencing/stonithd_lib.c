@@ -49,6 +49,7 @@
 #include <clplumbing/proctrack.h>
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
+#include <crm/crm.h>
 #include <string.h>
 
 #include <assert.h>
@@ -253,7 +254,7 @@ stonithd_signon(const char * client_name)
 		    cbchan = NULL;
 		}
 		stdlib_log(LOG_DEBUG, "stonithd_signon: creating connection");
-		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+		wchanattrs = g_hash_table_new(crm_str_hash, g_str_equal);
         	g_hash_table_insert(wchanattrs, path, sock);
 		/* Connect to the stonith deamon */
 		chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
@@ -362,7 +363,7 @@ stonithd_signon(const char * client_name)
 	}
 
 	/* Connect to the stonith deamon via callback channel */
-	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+	wchanattrs = g_hash_table_new(crm_str_hash, g_str_equal);
         g_hash_table_insert(wchanattrs, path, cbsock);
 	cbchan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
 	g_hash_table_destroy(wchanattrs);

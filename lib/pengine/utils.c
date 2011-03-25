@@ -494,10 +494,10 @@ custom_action(resource_t *rsc, char *key, const char *task,
 		action->seen_count = 0;
 		
 		action->extra = g_hash_table_new_full(
-		    g_str_hash, g_str_equal, free, free);
+		    crm_str_hash, g_str_equal, free, free);
 		
 		action->meta = g_hash_table_new_full(
-		    g_str_hash, g_str_equal, free, free);
+		    crm_str_hash, g_str_equal, free, free);
 		
 		if(save_action) {
 			data_set->actions = g_list_append(

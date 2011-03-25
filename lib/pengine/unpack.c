@@ -64,7 +64,7 @@ unpack_config(xmlNode *config, pe_working_set_t *data_set)
 {
 	const char *value = NULL;
 	GHashTable *config_hash = g_hash_table_new_full(
-		g_str_hash,g_str_equal, g_hash_destroy_str,g_hash_destroy_str);
+		crm_str_hash,g_str_equal, g_hash_destroy_str,g_hash_destroy_str);
 
 	data_set->config_hash = config_hash;
 
@@ -245,7 +245,7 @@ unpack_nodes(xmlNode * xml_nodes, pe_working_set_t *data_set)
 		new_node->details->shutdown	= FALSE;
 		new_node->details->running_rsc	= NULL;
 		new_node->details->attrs        = g_hash_table_new_full(
-			g_str_hash, g_str_equal,
+			crm_str_hash, g_str_equal,
 			g_hash_destroy_str, g_hash_destroy_str);
 		
 /* 		if(data_set->have_quorum == FALSE */

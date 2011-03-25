@@ -24,6 +24,7 @@
 #include <ha_msg.h>
 #include <clplumbing/cl_log.h>
 #include <fencing/stonithd_msg.h>
+#include <crm/crm.h>
 
 static const gboolean DEBUG_MODE = FALSE;
 /* Internally used function to free the string item of a hash table */
@@ -100,7 +101,7 @@ cl_get_hashtable(struct ha_msg * msg, const char * name)
 		return NULL;
 	}
 
-	htable = g_hash_table_new_full(g_str_hash, g_str_equal,
+	htable = g_hash_table_new_full(crm_str_hash, g_str_equal,
 					free_str_key, free_str_val);
 
 	for (i = 0; i < tmp_msg->nfields; i++) {
