@@ -13,5 +13,3 @@ child_rsc1:1 promotion score on node2: 99
 child_rsc1:0 promotion score on node1: -1
 native_color: simple-rsc allocation score on node1: -1000000
 native_color: simple-rsc allocation score on node2: 0
-child_rsc1:1 promotion score on node2: 1000000
-child_rsc1:0 promotion score on node1: -1000000

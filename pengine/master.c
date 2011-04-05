@@ -515,10 +515,20 @@ master_color(resource_t *rsc, pe_working_set_t *data_set)
 	clone_variant_data_t *clone_data = NULL;
 	get_clone_variant_data(clone_data, rsc);
 
+    if(is_not_set(rsc->flags, pe_rsc_provisional)) {
+	return NULL;
+
+    } else if(is_set(rsc->flags, pe_rsc_allocating)) {
+	crm_debug("Dependency loop detected involving %s", rsc->id);
+	return NULL;
+    }
+
 	apply_master_prefs(rsc);
 
 	clone_color(rsc, data_set);
 	
+    set_bit(rsc->flags, pe_rsc_allocating);
+
 	/* count now tracks the number of masters allocated */
 	slist_iter(node, node_t, rsc->allowed_nodes, lpc,
 		   node->count = 0;

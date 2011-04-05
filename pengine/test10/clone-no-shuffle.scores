@@ -13,7 +13,5 @@ native_color: drbd1:0 allocation score on dktest2sles10: -1000000
 native_color: drbd1:0 allocation score on dktest1sles10: -1000000
 drbd1:0 promotion score on none: 0
 drbd1:1 promotion score on dktest1sles10: -1
-drbd1:0 promotion score on none: 0
-drbd1:1 promotion score on dktest1sles10: -1000000
 native_color: testip allocation score on dktest2sles10: -1000000
 native_color: testip allocation score on dktest1sles10: -1000000

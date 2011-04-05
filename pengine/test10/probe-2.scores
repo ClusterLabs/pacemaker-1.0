@@ -67,16 +67,12 @@ group_color: intip_sql allocation score on wc01: 0
 group_color: intip_sql allocation score on wc02: 0
 group_color: mysql-server allocation score on wc01: 0
 group_color: mysql-server allocation score on wc02: 0
-drbd_mysql:0 promotion score on wc01: 1000000
-drbd_mysql:1 promotion score on none: 0
 native_color: fs_mysql allocation score on wc01: 76
 native_color: fs_mysql allocation score on wc02: -1000000
 native_color: intip_sql allocation score on wc01: 0
 native_color: intip_sql allocation score on wc02: -1000000
 native_color: mysql-server allocation score on wc01: 0
 native_color: mysql-server allocation score on wc02: -1000000
-drbd_www:0 promotion score on wc01: 1000000
-drbd_www:1 promotion score on none: 0
 clone_color: clone_mysql-proxy allocation score on wc01: 0
 clone_color: clone_mysql-proxy allocation score on wc02: 0
 clone_color: group_mysql-proxy:0 allocation score on wc01: 0

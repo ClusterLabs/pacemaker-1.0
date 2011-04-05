@@ -39,8 +39,6 @@ drbd-itwiki:1 promotion score on cl-virt-2: 275
 drbd-itwiki:0 promotion score on cl-virt-1: -1
 native_color: itwiki allocation score on cl-virt-1: -1000000
 native_color: itwiki allocation score on cl-virt-2: 176
-drbd-itwiki:1 promotion score on cl-virt-2: 1000000
-drbd-itwiki:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-bugtrack allocation score on cl-virt-1: 50
 clone_color: ms-bugtrack allocation score on cl-virt-2: 100
 clone_color: drbd-bugtrack:0 allocation score on cl-virt-1: 1
@@ -55,8 +53,6 @@ drbd-bugtrack:1 promotion score on cl-virt-2: 275
 drbd-bugtrack:0 promotion score on cl-virt-1: -1
 native_color: bugtrack allocation score on cl-virt-1: -1000000
 native_color: bugtrack allocation score on cl-virt-2: 176
-drbd-bugtrack:1 promotion score on cl-virt-2: 1000000
-drbd-bugtrack:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-servsyslog allocation score on cl-virt-1: 50
 clone_color: ms-servsyslog allocation score on cl-virt-2: 100
 clone_color: drbd-servsyslog:0 allocation score on cl-virt-1: 1
@@ -71,8 +67,6 @@ drbd-servsyslog:1 promotion score on cl-virt-2: 275
 drbd-servsyslog:0 promotion score on cl-virt-1: -1
 native_color: servsyslog allocation score on cl-virt-1: -1000000
 native_color: servsyslog allocation score on cl-virt-2: 176
-drbd-servsyslog:1 promotion score on cl-virt-2: 1000000
-drbd-servsyslog:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-smsprod2 allocation score on cl-virt-1: 0
 clone_color: ms-smsprod2 allocation score on cl-virt-2: 150
 clone_color: drbd-smsprod2:0 allocation score on cl-virt-1: 1
@@ -87,8 +81,6 @@ drbd-smsprod2:1 promotion score on cl-virt-2: 375
 drbd-smsprod2:0 promotion score on cl-virt-1: -1
 native_color: smsprod2 allocation score on cl-virt-1: -1000000
 native_color: smsprod2 allocation score on cl-virt-2: 226
-drbd-smsprod2:1 promotion score on cl-virt-2: 1000000
-drbd-smsprod2:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-medomus-cvs allocation score on cl-virt-1: 0
 clone_color: ms-medomus-cvs allocation score on cl-virt-2: 150
 clone_color: drbd-medomus-cvs:0 allocation score on cl-virt-1: 1
@@ -103,8 +95,6 @@ drbd-medomus-cvs:1 promotion score on cl-virt-2: 375
 drbd-medomus-cvs:0 promotion score on cl-virt-1: -1
 native_color: medomus-cvs allocation score on cl-virt-1: -1000000
 native_color: medomus-cvs allocation score on cl-virt-2: 226
-drbd-medomus-cvs:1 promotion score on cl-virt-2: 1000000
-drbd-medomus-cvs:0 promotion score on cl-virt-1: -1000000
 clone_color: ms-infotos allocation score on cl-virt-1: 0
 clone_color: ms-infotos allocation score on cl-virt-2: 150
 clone_color: drbd-infotos:0 allocation score on cl-virt-1: 1
@@ -119,5 +109,3 @@ drbd-infotos:1 promotion score on cl-virt-2: 375
 drbd-infotos:0 promotion score on cl-virt-1: -1
 native_color: infotos allocation score on cl-virt-1: -1000000
 native_color: infotos allocation score on cl-virt-2: 226
-drbd-infotos:1 promotion score on cl-virt-2: 1000000
-drbd-infotos:0 promotion score on cl-virt-1: -1000000

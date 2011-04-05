@@ -24,8 +24,5 @@ native_color: sf:1 allocation score on sel3: -1000000
 native_color: sf:1 allocation score on sel4: 1
 sf:0 promotion score on sel3: 99
 sf:1 promotion score on sel4: -1
-drbd0:0 promotion score on sel3: 1000000
-drbd0:1 promotion score on sel4: -1000000
-drbd0:2 promotion score on none: 0
 native_color: fs0 allocation score on sel3: 76
 native_color: fs0 allocation score on sel4: -1000000

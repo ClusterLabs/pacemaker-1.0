@@ -47,12 +47,8 @@ clone_color: ocfs2_www:0 allocation score on webcluster01: 0
 clone_color: ocfs2_www:0 allocation score on webcluster02: 0
 clone_color: ocfs2_www:1 allocation score on webcluster01: 0
 clone_color: ocfs2_www:1 allocation score on webcluster02: 0
-drbd_www:1 promotion score on none: 0
-drbd_www:0 promotion score on webcluster01: -1000000
 native_color: ocfs2_www:0 allocation score on webcluster01: -1000000
 native_color: ocfs2_www:0 allocation score on webcluster02: -1000000
-drbd_www:1 promotion score on none: 0
-drbd_www:0 promotion score on webcluster01: -1000000
 native_color: ocfs2_www:1 allocation score on webcluster01: -1000000
 native_color: ocfs2_www:1 allocation score on webcluster02: -1000000
 clone_color: clone_webservice allocation score on webcluster01: 0
@@ -89,5 +85,3 @@ native_color: apache2:1 allocation score on webcluster01: -1000000
 native_color: apache2:1 allocation score on webcluster02: -1000000
 native_color: mysql-proxy:1 allocation score on webcluster01: -1000000
 native_color: mysql-proxy:1 allocation score on webcluster02: -1000000
-drbd_mysql:1 promotion score on none: 0
-drbd_mysql:0 promotion score on webcluster01: -1000000

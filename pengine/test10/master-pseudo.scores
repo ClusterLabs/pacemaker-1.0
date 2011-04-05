@@ -14,7 +14,6 @@ group_color: ip_nfs allocation score on raki.linbit: 0
 group_color: ip_nfs allocation score on sambuca.linbit: 0
 group_color: fs_float allocation score on raki.linbit: 0
 group_color: fs_float allocation score on sambuca.linbit: -1000000
-drbd_float:0 promotion score on sambuca.linbit: 1000000
 native_color: ip_nfs allocation score on raki.linbit: -1000000
 native_color: ip_nfs allocation score on sambuca.linbit: 51
 native_color: fs_float allocation score on raki.linbit: -1000000

@@ -77,10 +77,6 @@ native_color: vip-237 allocation score on s01-1: 0
 native_color: vip-237 allocation score on s01-0: -1000000
 native_color: vip-238 allocation score on s01-1: 0
 native_color: vip-238 allocation score on s01-0: -1000000
-drbd-pool-0:0 promotion score on s01-0: 1000000
-drbd-pool-0:1 promotion score on s01-1: -1000000
-drbd-pool-1:1 promotion score on s01-1: 1000000
-drbd-pool-1:0 promotion score on s01-0: -1000000
 clone_color: ms-iscsi-pool-0-vips-fw allocation score on s01-1: 0
 clone_color: ms-iscsi-pool-0-vips-fw allocation score on s01-0: 0
 clone_color: iscsi-pool-0-vips-fw:0 allocation score on s01-1: 0
@@ -201,12 +197,8 @@ native_color: gfs2:0 allocation score on s01-1: -1000000
 native_color: gfs2:0 allocation score on s01-0: 1
 native_color: gfs2:1 allocation score on s01-1: 1
 native_color: gfs2:1 allocation score on s01-0: -1000000
-drbd-s01-service:0 promotion score on s01-1: 1000000
-drbd-s01-service:1 promotion score on s01-0: 1000000
 native_color: s01-service-fs:0 allocation score on s01-1: 10002
 native_color: s01-service-fs:0 allocation score on s01-0: -1000000
-drbd-s01-service:0 promotion score on s01-1: 1000000
-drbd-s01-service:1 promotion score on s01-0: 1000000
 native_color: s01-service-fs:1 allocation score on s01-1: -1000000
 native_color: s01-service-fs:1 allocation score on s01-0: 10002
 clone_color: cl-dhcpd allocation score on s01-1: 0
@@ -257,12 +249,8 @@ clone_color: s01-logs-fs:0 allocation score on s01-1: 0
 clone_color: s01-logs-fs:0 allocation score on s01-0: 1
 clone_color: s01-logs-fs:1 allocation score on s01-1: 1
 clone_color: s01-logs-fs:1 allocation score on s01-0: 0
-drbd-s01-logs:0 promotion score on s01-1: 1000000
-drbd-s01-logs:1 promotion score on s01-0: 1000000
 native_color: s01-logs-fs:0 allocation score on s01-1: -1000000
 native_color: s01-logs-fs:0 allocation score on s01-0: 10002
-drbd-s01-logs:0 promotion score on s01-1: 1000000
-drbd-s01-logs:1 promotion score on s01-0: 1000000
 native_color: s01-logs-fs:1 allocation score on s01-1: 10002
 native_color: s01-logs-fs:1 allocation score on s01-0: -1000000
 group_color: syslog-server allocation score on s01-1: 0
@@ -301,8 +289,6 @@ drbd-vds-tftpboot:0 promotion score on s01-1: 10000
 drbd-vds-tftpboot:1 promotion score on s01-0: 10000
 native_color: vds-tftpboot-fs:0 allocation score on s01-1: -1000000
 native_color: vds-tftpboot-fs:0 allocation score on s01-0: -1000000
-drbd-vds-tftpboot:0 promotion score on s01-1: 1000000
-drbd-vds-tftpboot:1 promotion score on s01-0: 1000000
 native_color: vds-tftpboot-fs:1 allocation score on s01-1: -1000000
 native_color: vds-tftpboot-fs:1 allocation score on s01-0: -1000000
 clone_color: cl-xinetd allocation score on s01-1: 0
@@ -395,8 +381,6 @@ native_color: vip-227 allocation score on s01-1: -1000000
 native_color: vip-227 allocation score on s01-0: -1000000
 native_color: vip-228 allocation score on s01-1: -1000000
 native_color: vip-228 allocation score on s01-0: -1000000
-drbd-vds-dom0-stateless-0:1 promotion score on s01-0: 1000000
-drbd-vds-dom0-stateless-0:0 promotion score on s01-1: -1000000
 clone_color: ms-iscsi-vds-dom0-stateless-0-vips-fw allocation score on s01-1: 0
 clone_color: ms-iscsi-vds-dom0-stateless-0-vips-fw allocation score on s01-0: 0
 clone_color: iscsi-vds-dom0-stateless-0-vips-fw:0 allocation score on s01-1: 0
@@ -433,8 +417,6 @@ native_color: vip-228-fw:1 allocation score on s01-1: 1
 native_color: vip-228-fw:1 allocation score on s01-0: -1000000
 iscsi-vds-dom0-stateless-0-vips-fw:0 promotion score on s01-0: -1000000
 iscsi-vds-dom0-stateless-0-vips-fw:1 promotion score on s01-1: -1000000
-drbd-vds-tftpboot:0 promotion score on s01-1: 1000000
-drbd-vds-tftpboot:1 promotion score on s01-0: 1000000
 clone_color: ms-drbd-vds-http allocation score on s01-1: 0
 clone_color: ms-drbd-vds-http allocation score on s01-0: 0
 clone_color: drbd-vds-http:0 allocation score on s01-1: 10001
@@ -453,12 +435,8 @@ clone_color: vds-http-fs:0 allocation score on s01-1: 1
 clone_color: vds-http-fs:0 allocation score on s01-0: 0
 clone_color: vds-http-fs:1 allocation score on s01-1: 0
 clone_color: vds-http-fs:1 allocation score on s01-0: 1
-drbd-vds-http:0 promotion score on s01-1: 1000000
-drbd-vds-http:1 promotion score on s01-0: 1000000
 native_color: vds-http-fs:0 allocation score on s01-1: 10002
 native_color: vds-http-fs:0 allocation score on s01-0: -1000000
-drbd-vds-http:0 promotion score on s01-1: 1000000
-drbd-vds-http:1 promotion score on s01-0: 1000000
 native_color: vds-http-fs:1 allocation score on s01-1: -1000000
 native_color: vds-http-fs:1 allocation score on s01-0: 10002
 clone_color: cl-clvmd allocation score on s01-1: 0
@@ -495,12 +473,8 @@ clone_color: vg-s01-vm-data:0 allocation score on s01-1: 1
 clone_color: vg-s01-vm-data:0 allocation score on s01-0: 0
 clone_color: vg-s01-vm-data:1 allocation score on s01-1: 0
 clone_color: vg-s01-vm-data:1 allocation score on s01-0: 1
-drbd-s01-vm-data:0 promotion score on s01-1: 1000000
-drbd-s01-vm-data:1 promotion score on s01-0: 1000000
 native_color: vg-s01-vm-data:0 allocation score on s01-1: 10002
 native_color: vg-s01-vm-data:0 allocation score on s01-0: -1000000
-drbd-s01-vm-data:0 promotion score on s01-1: 1000000
-drbd-s01-vm-data:1 promotion score on s01-0: 1000000
 native_color: vg-s01-vm-data:1 allocation score on s01-1: -1000000
 native_color: vg-s01-vm-data:1 allocation score on s01-0: 10002
 native_color: s01-vm-data-metadata-fs:0 allocation score on s01-1: 1
