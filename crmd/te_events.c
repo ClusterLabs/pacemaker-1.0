@@ -73,6 +73,10 @@ fail_incompletable_actions(crm_graph_t *graph, const char *down_node)
 	const char *target = NULL;
 	xmlNode *last_action = NULL;
 
+	if(graph == NULL || graph->complete) {
+		return FALSE;
+	}
+
 	slist_iter(
 		synapse, synapse_t, graph->synapses, lpc,
 		if (synapse->confirmed) {
