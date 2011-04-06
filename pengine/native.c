@@ -1109,7 +1109,7 @@ LogActions(resource_t *rsc, pe_working_set_t *data_set)
     
     if(is_not_set(rsc->flags, pe_rsc_managed)
        || (current == NULL && next == NULL)) {
-	crm_notice("Leave resource %s\t(%s%s)",
+	crm_notice("Leave   resource %s\t(%s%s)",
 		   rsc->id, role2text(rsc->role), is_not_set(rsc->flags, pe_rsc_managed)?" unmanaged":"");
 	return;
     }
@@ -1142,11 +1142,11 @@ LogActions(resource_t *rsc, pe_working_set_t *data_set)
 	    g_list_free(possible_matches);
 	    
 	} else if(start == NULL || start->optional) {
-	    crm_notice("Leave resource %s\t(%s %s)",
+	    crm_notice("Leave   resource %s\t(%s %s)",
 		       rsc->id, role2text(rsc->role), next->details->uname);
 	    
 	} else if(moving && current) {
-	    crm_notice("Move resource %s\t(%s %s -> %s)",
+	    crm_notice("Move    resource %s\t(%s %s -> %s)",
 		       rsc->id, role2text(rsc->role), current->details->uname, next->details->uname);
 	    
 	} else if(is_set(rsc->flags, pe_rsc_failed)) {
@@ -1154,7 +1154,7 @@ LogActions(resource_t *rsc, pe_working_set_t *data_set)
 		       rsc->id, role2text(rsc->role), next->details->uname);
 	    
 	} else if(start && start->runnable == FALSE) {
-	    crm_notice("Stop resource %s\t(%s %s)",
+	    crm_notice("Stop    resource %s\t(%s %s)",
 		       rsc->id, role2text(rsc->role), next->details->uname);
 
 	} else {
@@ -1168,7 +1168,7 @@ LogActions(resource_t *rsc, pe_working_set_t *data_set)
     if(rsc->role > RSC_ROLE_SLAVE && rsc->role > rsc->next_role) {
 	CRM_CHECK(current != NULL,);
 	if(current != NULL) {
-	    crm_notice("Demote %s\t(%s -> %s %s)", rsc->id,
+	    crm_notice("Demote  %s\t(%s -> %s %s)", rsc->id,
 		       role2text(rsc->role), role2text(rsc->next_role),
 		       current->details->uname);
 	}
@@ -1177,13 +1177,13 @@ LogActions(resource_t *rsc, pe_working_set_t *data_set)
     if(rsc->next_role == RSC_ROLE_STOPPED || moving) {
 	CRM_CHECK(current != NULL,);
 	slist_iter(node, node_t, rsc->running_on, lpc,
-		   crm_notice("Stop resource %s\t(%s)", rsc->id, node->details->uname));
+		   crm_notice("Stop    resource %s\t(%s)", rsc->id, node->details->uname));
     }
 
     if(rsc->role == RSC_ROLE_STOPPED || moving) {
 	CRM_CHECK(next != NULL,);
 	if(next != NULL) {
-	    crm_notice("Start %s\t(%s)", rsc->id, next->details->uname);
+	    crm_notice("Start   %s\t(%s)", rsc->id, next->details->uname);
 	}
     }    
 
