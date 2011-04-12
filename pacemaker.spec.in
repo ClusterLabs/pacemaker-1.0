@@ -3,8 +3,8 @@
 %global pcmk_docdir %{_docdir}/%{name}
 
 %global specversion 1.5
-#global upstream_version 00c6e47d32f3
-%global upstream_prefix pacemaker
+%global upstream_version 00c6e47d32f3
+%global upstream_prefix pacemaker-
 
 # Keep around for when/if required
 #global alphatag %{upstream_version}.hg
@@ -42,7 +42,7 @@ Release:	%{pcmk_release}
 License:	GPLv2+ and LGPLv2+
 Url:		http://www.clusterlabs.org
 Group:		System Environment/Daemons
-Source0:	pacemaker.tar.bz2
+Source0:	%{upstream_prefix}%{?upstream_version}.tar.bz2
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 AutoReqProv:	on
 Requires(pre):	cluster-glue
