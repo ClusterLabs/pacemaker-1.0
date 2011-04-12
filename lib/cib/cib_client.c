@@ -484,11 +484,11 @@ gint ciblib_GCompareFunc(gconstpointer a, gconstpointer b)
 	if(a_client->callback == b_client->callback) {
 	    return 0;
 	} else if(((long)a_client->callback) < ((long)b_client->callback)) {
-	    crm_trace("callbacks for %s are not equal: %p < %p",
+	    crm_debug("callbacks for %s are not equal: %p < %p",
 		      a_client->event, a_client->callback, b_client->callback);
 	    return -1;
 	} 
-	crm_trace("callbacks for %s are not equal: %p > %p",
+	crm_debug("callbacks for %s are not equal: %p > %p",
 		  a_client->event, a_client->callback, b_client->callback);
 	return 1;
     }
