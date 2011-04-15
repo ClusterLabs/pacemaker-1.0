@@ -99,6 +99,9 @@ get_timer_desc(fsa_timer_t *timer)
  	} else if(timer == finalization_timer) {
 		return "Finalization Timer";
 
+ 	} else if(timer == transition_timer) {
+		return "New Transition Timer";
+
  	} else if(timer == wait_timer) {
 		return "Wait Timer";
 
@@ -116,6 +119,7 @@ crm_timer_popped(gpointer data)
 
 	if(timer == wait_timer
 	   || timer == recheck_timer
+	   || timer == transition_timer
 	   || timer == finalization_timer
 	   || timer == election_trigger) {
 		crm_info("%s (%s) just popped!",
@@ -123,9 +127,10 @@ crm_timer_popped(gpointer data)
 			fsa_input2string(timer->fsa_input));
 		
 	} else {
-		crm_err("%s (%s) just popped!",
+		crm_err("%s (%s) just popped in state %s!",
 			get_timer_desc(timer),
-			fsa_input2string(timer->fsa_input));
+			fsa_input2string(timer->fsa_input),
+			fsa_state2string(fsa_state));
 	}
 
 	if(timer->repeat == FALSE) {
@@ -146,14 +151,12 @@ crm_timer_popped(gpointer data)
 			C_TIMER_POPPED, timer->fsa_input, NULL);
 	    }	    
 
-	} else if(timer->fsa_input == I_PE_CALC
-		  && fsa_state != S_IDLE) {
+	} else if(timer == recheck_timer && fsa_state != S_IDLE) {
 		crm_debug("Discarding %s event in state: %s",
 			  fsa_input2string(timer->fsa_input),
 			  fsa_state2string(fsa_state));
 		
-	} else if(timer->fsa_input == I_FINALIZED
-		  && fsa_state != S_FINALIZE_JOIN) {
+	} else if(timer == finalization_timer && fsa_state != S_FINALIZE_JOIN) {
 		crm_debug("Discarding %s event in state: %s",
 			  fsa_input2string(timer->fsa_input),
 			  fsa_state2string(fsa_state));
