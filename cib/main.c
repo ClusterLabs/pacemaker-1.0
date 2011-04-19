@@ -95,6 +95,13 @@ char *channel5 = NULL;
 void cib_cleanup(void);
 
 static void
+cib_enable_writes(int nsig)
+{
+    crm_info("(Re)enabling disk writes");
+    cib_writes_enabled = TRUE;
+}
+
+static void
 cib_diskwrite_complete(gpointer userdata, int status, int signo, int exitcode)
 {
 	if(exitcode != LSB_EXIT_OK || signo != 0 || status != 0) {
@@ -136,6 +143,7 @@ main(int argc, char ** argv)
 	struct passwd *pwentry = NULL;	
 	crm_log_init(CRM_SYSTEM_CIB, LOG_INFO, TRUE, TRUE, argc, argv);
 	mainloop_add_signal(SIGTERM, cib_shutdown);
+	mainloop_add_signal(SIGPIPE, cib_enable_writes);
 	
 	cib_writer = G_main_add_tempproc_trigger(			
 		G_PRIORITY_LOW, write_cib_contents, "write_cib_contents",
