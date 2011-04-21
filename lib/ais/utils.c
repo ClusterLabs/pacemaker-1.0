@@ -253,7 +253,7 @@ int update_member(unsigned int id, uint64_t born, uint64_t seq, int32_t votes,
     if(born != 0 && node->born != born) {
 	changed = TRUE;
 	node->born = born;
-	ais_info("%p Node %u (%s) born on: "U64T, node, id, uname, born);
+	ais_info("%p Node %u (%s) born on: "U64T, node, id, node->uname, born);
     }
 
     if(version != NULL) {
