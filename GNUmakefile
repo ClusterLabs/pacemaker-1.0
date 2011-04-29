@@ -25,7 +25,7 @@ distdir			= $(PACKAGE)-$(TAG)
 TARFILE			= $(distdir).tar.bz2
 DIST_ARCHIVES		= $(TARFILE)
 
-LAST_RELEASE		= $(firstword $(shell hg tags| grep Pacemaker | head -n 1))
+LAST_RELEASE		?= $(firstword $(shell hg tags| grep Pacemaker | head -n 1))
 
 RPM_ROOT	= $(shell pwd)
 RPM_OPTS	= --define "_sourcedir $(RPM_ROOT)" 	\

@@ -1,4 +1,62 @@
-* Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
+* Fri Apr 29 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.11-1
+- Update source tarball to revision: bc6104efe006 (stable-1.0) tip
+- Statistics:
+  Changesets: 85
+  Diff:       500 files changed, 69642 insertions(+), 58270 deletions(-)
+
+- Changes since Pacemaker-1.0.10
+  + High: cib: Fix compilation of 1.1 backport
+  + High: cib: Repair the processing of updates sent from peer nodes
+  + High: crmd: All pending operations should be recorded, even recurring ones with high start delays
+  + High: crmd: Bug lf#2509 - Watch for config option changes from the CIB even if we're not the DC
+  + High: crmd: Bug lf#2528 - Introduce a slight delay when creating a transition to allow attrd time to perform its updates
+  + High: crmd: Bug lf#2545 - Ensure notify variables are accurate for stop operations
+  + High: crmd: Bug lf#2559 - Fail actions that were scheduled for a failed/fenced node
+  + High: crmd: Cancel recurring operations while we're still connected to the lrmd
+  + High: crmd: Don't abort transitions when probes are completed on a node
+  + High: crmd: Ensure the CIB is always writable on the DC by removing a timing hole
+  + High: crmd: Update failcount for failed promote and demote operations
+  + High: PE: Bug lf#2495 - Prevent segfault by validating the contents of ordering sets
+  + High: PE: Bug lf#2508 - Correctly reconstruct the status of anonymous cloned groups
+  + High: PE: Bug lf#2544 - Prevent unstable clone placement by factoring in the current node's score before all others
+  + High: PE: Bug lf#2554 - target-role alone is not sufficient to promote resources
+  + High: PE: Ensure fencing of the DC preceeds the STONITH_DONE operation
+  + High: PE: Ensure that fencing has completed for stop actions on stonith-dependent resources (lf#2551)
+  + High: PE: Prevent clones from being stopped because resources colocated with them cannot be active
+  + High: PE: Prevet use-after-free resulting from unintended recursion when chosing a node to promote master/slave resources
+  + High: Shell: don't create empty optional sections (bnc#665131)
+  + High: Tools: Bug lf#2528 - Make progress when attrd_updater is called repeatedly within the dampen interval but with the same value
+  + High: Tools: Prevent crm_resource commands from being lost due to the use of cib_scope_local
+  + Medium: cib: Downgrade development logging from ERROR
+  + Medium: Core: Bug lf#2511 - Correctly parse the resource name from notificiation action IDs
+  + Medium: Core: Do not store last-run for recurring operations, since it is misleading
+  + Medium: crmd: Allow operations in the PE state
+  + Medium: crmd: Bug lf#2309 - Cancel recurring monitor ops at shutdown
+  + Medium: crmd: Bug lf#2536 - Purge status for resourcs that no longer live in the LRMd
+  + Medium: PE: Additional sanity checking of constraint set members
+  + Medium: PE: Bug lf#2529 - Protect against constraints that require stonith devices to stop before 'normal' ones
+  + Medium: PE: Regression test updates (lf#2551)
+  + Medium: PE: Re-organise the logic for determining what considitons an action requires in order to be performed
+  + Medium: RA: Allow a list of filesystems/devices to be queried for free space - by Matthew Richardson
+  + Medium: RA: Fix handling of 'devices' in the HealthSMART agent (Patch from Keisuke MORI)
+  + Medium: RA: Overhaul of the HealthSMART RA by Matthew Richardson
+  + Medium: Shell: allow adding node attributes in configure when the attributes set doesn't already exist
+  + Medium: Shell: ask for confirmation for node fence and clearstate (bnc#642268)
+  + Medium: Shell: combine crmd and PE meta-data (lf#2373,2419)
+  + Medium: Shell: fix exception when HOME is not set
+  + Medium: Shell: fix rsc/op_defaults edit
+  + Medium: Shell: Let crm_resource handle node & resource iteration during resource cleanup (skips down nodes: bnc#647378)
+  + Medium: Shell: merge properties and rsc/op_defaults on load update (lf#2454)
+  + Medium: Shell: node clearstate must flush LRM state too (bnc#653795)
+  + Medium: Shell: repair ability to display multiple property sets
+  + Medium: Shell: repair management of cloned groups
+  + Medium: Shell: update shadow file directory processing
+  + Medium: Shell: wait for the stop transition to finish before invoking start in the resource restart command (lf#2516)
+  + Medium: stonithd: return RA code on stonith RA op timeout (lf#2530)
+  + Medium: Tools: Add crm_report from 1.1
+  + Medium: Tools: Bug lf#2477 - crm_resource - Indicate master/slave state when querying the parent resource
+
+* Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.10-1
 - Update source tarball to revision: 4172c2ad2756 (stable-1.0) tip
 - Statistics:
   Changesets: 75

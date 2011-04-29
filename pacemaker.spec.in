@@ -2,7 +2,7 @@
 %global uname hacluster
 %global pcmk_docdir %{_docdir}/%{name}
 
-%global specversion 0.10
+%global specversion 1
 %global upstream_version 00c6e47d32f3
 %global upstream_prefix pacemaker-
 
@@ -271,7 +271,13 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
-* Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.9-1
+* Fri Apr 29 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.11-1
+- Update source tarball to revision: bc6104efe006 (stable-1.0) tip
+- Statistics:
+  Changesets: 85
+  Diff:       500 files changed, 69642 insertions(+), 58270 deletions(-)
+
+* Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.10-1
 - Update source tarball to revision: 4172c2ad2756 (stable-1.0) tip
 - Statistics:
   Changesets: 75
