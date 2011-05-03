@@ -1048,6 +1048,24 @@ Example:
         sort-elements no
 ...............
 
+[[cmdhelp_options_wait,synchronous operation]]
+==== `wait`
+
+In normal operation, `crm` runs a command and gets back
+immediately to process other commands or get input from the user.
+With this option set to `yes` it will wait for the started
+transition to finish. In interactive mode dots are printed to
+indicate progress.
+
+Usage:
+...............
+        wait {yes|no}
+...............
+Example:
+...............
+        wait yes
+...............
+
 [[cmdhelp_options_output,set output type]]
 ==== `output`
 
