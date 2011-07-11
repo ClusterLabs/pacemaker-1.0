@@ -1523,10 +1523,6 @@ write_last_sequence(
 
 int crm_pid_active(long pid)
 {
-    int rc = 0;
-    int running = 0;
-    char proc_path[PATH_MAX], exe_path[PATH_MAX], myexe_path[PATH_MAX];
-
     if(pid <= 0) {
 	return -1;
 
@@ -1536,7 +1532,11 @@ int crm_pid_active(long pid)
 
 #ifndef HAVE_PROC_PID
     return 1;
-#endif
+#else
+    {
+    int rc = 0;
+    int running = 0;
+    char proc_path[PATH_MAX], exe_path[PATH_MAX], myexe_path[PATH_MAX];
 	
     /* check to make sure pid hasn't been reused by another process */
     snprintf(proc_path, sizeof(proc_path), "/proc/%lu/exe", pid);
@@ -1559,9 +1559,11 @@ int crm_pid_active(long pid)
     if(strcmp(exe_path, myexe_path) == 0) {
 	running = 1;
     }
-
+    }
+    
   bail:
     return running;
+#endif
 }
 
 
