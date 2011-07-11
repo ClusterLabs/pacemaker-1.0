@@ -331,6 +331,7 @@ do_test bug-lf-1920 "Correctly handle probes that find active resources"
 do_test bnc-515172 "Location constraint with multiple expressions"
 do_test colocate-primitive-with-clone "Optional colocation with a clone"
 do_test bug-lf-2551 "STONITH ordering for stop"
+do_test bug-lf-2606 "Stonith implies demote"
 
 echo ""
 do_test systemhealth1  "System Health ()               #1"
