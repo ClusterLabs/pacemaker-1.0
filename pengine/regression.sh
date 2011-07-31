@@ -278,6 +278,9 @@ do_test bug-lf-2358 "Master-Master anti-colocation"
 do_test master-promotion-constraint "Mandatory master colocation constraints"
 
 echo ""
+do_test history-1 "Correctly parse stateful-1 resource state"
+
+echo ""
 do_test managed-0 "Managed (reference)"
 do_test managed-1 "Not managed - down "
 do_test managed-2 "Not managed - up   "
