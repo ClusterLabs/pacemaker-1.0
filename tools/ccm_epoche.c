@@ -357,7 +357,7 @@ static gboolean try_corosync(int command)
 		break;
 
 	    case 'i':
-		printf("%d\n", local_id);
+		printf("%u\n", local_id);
 		exit(0);
 
 	    default:
