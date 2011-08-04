@@ -95,9 +95,16 @@ fail_incompletable_actions(crm_graph_t *graph, const char *down_node)
 				action->failed = TRUE;
 				synapse->failed = TRUE;
 				last_action = action->xml;
+				stop_te_timer(action->timer);
 				update_graph(graph, action);
-				crm_notice("Action %d (%s) is scheduled for %s (offline)",
-					   action->id, ID(action->xml), down_node);
+
+				if(synapse->executed) {
+					crm_notice("Action %d (%s) was pending on %s (offline)",
+							   action->id, ID(action->xml), down_node);
+				} else {
+					crm_notice("Action %d (%s) is scheduled for %s (offline)",
+							   action->id, ID(action->xml), down_node);
+				}
 			}
 			
 			);
