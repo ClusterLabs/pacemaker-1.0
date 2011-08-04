@@ -107,7 +107,7 @@ update_graph(crm_graph_t *graph, crm_action_t *action)
 	gboolean updates = FALSE;
 	slist_iter(
 		synapse, synapse_t, graph->synapses, lpc,
-		if (synapse->confirmed) {
+		if (synapse->confirmed || synapse->failed) {
 			crm_debug_2("Synapse complete");
 			
 		} else if (synapse->executed) {
@@ -266,6 +266,10 @@ run_graph(crm_graph_t *graph)
 		    crm_debug("Throttling output: batch limit (%d) reached",
 			      graph->batch_limit);
 		    break;
+
+	} else if (synapse->failed) {
+	    graph->skipped++;
+	    continue;
 
 		} else if (synapse->confirmed || synapse->executed) {
 		    /* Already handled */
