@@ -1146,9 +1146,9 @@ process_recurring(node_t *node, resource_t *rsc,
 				       rsc->id, node->details->uname);
 			   break;
 			   
-		   } else if(lpc <= start_index) {
-			   crm_debug_4("Skipping %s/%s: old",
-				       id, node->details->uname);
+		   } else if(lpc < start_index) {
+			   crm_debug_4("Skipping %s/%s: old %d",
+				       id, node->details->uname, lpc);
 			   continue;
 		   }
 		   	
