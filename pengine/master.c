@@ -332,17 +332,19 @@ static void master_promotion_order(resource_t *rsc)
 	child, resource_t, rsc->children, lpc,
 
 	chosen = child->fns->location(child, NULL, FALSE);
+	if(is_not_set(child->flags, pe_rsc_managed) && child->next_role == RSC_ROLE_MASTER) {
+	    child->sort_index = INFINITY;
 
-	if(chosen == NULL || child->sort_index < 0) {
+	} else if(chosen == NULL || child->sort_index < 0) {
 	    crm_debug_2("%s: %d", child->id, child->sort_index);
-	    continue;
+
+	} else {
+	    node = (node_t*)pe_find_node_id(
+		rsc->allowed_nodes, chosen->details->id);
+	    CRM_ASSERT(node != NULL);
+
+	    child->sort_index = node->weight;
 	}
-
-	node = (node_t*)pe_find_node_id(
-	    rsc->allowed_nodes, chosen->details->id);
-	CRM_ASSERT(node != NULL);
-
-	child->sort_index = node->weight;
 	crm_debug_2("%s: %d", child->id, child->sort_index);
 	);
 
