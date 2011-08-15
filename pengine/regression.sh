@@ -338,6 +338,9 @@ do_test bnc-515172 "Location constraint with multiple expressions"
 do_test colocate-primitive-with-clone "Optional colocation with a clone"
 do_test bug-lf-2551 "STONITH ordering for stop"
 do_test bug-lf-2606 "Stonith implies demote"
+do_test bug-lf-2474 "Ensure resource op timeout takes precedence over op_defaults"
+do_test bug-suse-707150 "Prevent vm-01 from starting due to colocation/ordering"
+
 
 echo ""
 do_test systemhealth1  "System Health ()               #1"
@@ -355,9 +358,6 @@ do_test systemhealtho3 "System Health (Only Green)     #3"
 do_test systemhealthp1 "System Health (Progessive)     #1"
 do_test systemhealthp2 "System Health (Progessive)     #2"
 do_test systemhealthp3 "System Health (Progessive)     #3"
-
-echo ""
-do_test bug-lf-2474 "Ensure resource op timeout takes precedence over op_defaults"
 
 echo ""
 
