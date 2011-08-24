@@ -1,3 +1,11 @@
+# Valgrind suppressions for PE testing
+{
+   Valgrind bug
+   Memcheck:Addr8
+   fun:__strspn_sse42
+   fun:crm_get_msec
+}
+
 {
    Libxml2 Mutex
    Memcheck:Leak
