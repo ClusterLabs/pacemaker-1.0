@@ -1305,7 +1305,7 @@ main(int argc, char **argv)
 	}
 
 	crm_make_daemon(crm_system_name, daemonize, pid_file);
-	ident = getpid();
+	ident = getpid() & 0xffff;
 
 	if(do_updates == FALSE) {
 	    goto start_ping;
