@@ -1615,8 +1615,8 @@ unpack_rsc_op(resource_t *rsc, node_t *node, xmlNode *xml_op,
 				clear_past_failure = TRUE;
 
 			} else if(safe_str_eq(task, CRMD_ACTION_DEMOTE)) {
+				/* Demote from Master does not clear an error */
 				rsc->role = RSC_ROLE_SLAVE;
-				clear_past_failure = TRUE;
 				
 			} else if(rsc->role < RSC_ROLE_STARTED) {
 				crm_debug_3("%s active on %s",
