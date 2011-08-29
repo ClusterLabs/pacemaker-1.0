@@ -77,7 +77,7 @@ class CtsLab(UserDict):
         self["LogWatcher"] = "any"
         self["LogFileName"] = "/var/log/messages"
         self["OutputFile"] = None
-        self["SyslogFacility"] = None
+        self["SyslogFacility"] = "daemon"
         self["CMclass"] = None
         self["logger"] = ([StdErrLog(self)])
 
@@ -362,8 +362,8 @@ class RemoteExec:
         # http://nstraz.wordpress.com/2008/12/03/introducing-qarsh/
         self.log("Using QARSH for connections to cluster nodes")
         
-        self.Command = "qarsh -l root"
-        self.CpCommand = "qacp"
+        self.Command = "qarsh -t 300 -l root"
+        self.CpCommand = "qacp -q"
         
     def _fixcmd(self, cmd):
         return re.sub("\'", "'\\''", cmd)
@@ -476,7 +476,7 @@ Returns the current offset
 Contains logic for handling truncation
 '''
 
-limit    = 100
+limit    = 0
 offset   = 0
 prefix   = ''
 filename = '/var/log/messages'
@@ -523,14 +523,18 @@ if offset != 'EOF':
 # Don't block when we reach EOF
 fcntl.fcntl(logfile.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-count = limit
-while count > 0:
-    count -= 1
-    line = logfile.readline()
-    if line: print line.strip()
-    else: break
+count = 0
+while True: 
+    if logfile.tell() >= newsize:   break
+    elif limit and count >= limit: break
 
-print prefix + 'Last read: %d %d' % (logfile.tell(), limit - count)
+    line = logfile.readline()
+    if not line: break
+
+    print line.strip()
+    count += 1
+
+print prefix + 'Last read: %d, limit=%d, count=%d' % (logfile.tell(), limit, count)
 logfile.close()
 """
 
@@ -670,22 +674,14 @@ class LogWatcher(RemoteExec):
         '''
         self.returnonlymatch = onlymatch
 
-    def __get_line(self):
-
-        if not len(self.line_cache):
+    def __get_lines(self):
             if not len(self.file_list):
                 raise ValueError("No sources to read from")
 
             for f in self.file_list:
                 lines = f.next()
+            if len(lines):
                 self.line_cache.extend(lines)
-
-        if self.line_cache:
-            line = self.line_cache[0]
-            self.line_cache.remove(line)
-            return line
-
-        return None
 
     def look(self, timeout=None, silent=False):
         '''Examine the log looking for the given patterns.
@@ -699,13 +695,19 @@ class LogWatcher(RemoteExec):
         '''
         if timeout == None: timeout = self.Timeout
 
-        now=time.time()
-        done=now+timeout+1
-        if self.debug_level > 2: self.debug("starting single search: timeout=%d, now=%d, limit=%d" % (timeout, now, done))
+        lines=0
+        begin=time.time()
+        end=begin+timeout+1
+        if self.debug_level > 2: self.debug("starting single search: timeout=%d, begin=%d, end=%d" % (timeout, begin, end))
 
-        while (timeout <= 0 or time.time() <= done):
-            line = self.__get_line()
-            if line:
+        self.__get_lines()
+        while True:
+
+            if len(self.line_cache):
+                lines += 1
+                line = self.line_cache[0]
+                self.line_cache.remove(line)
+
                 which=-1
                 if re.search("CTS:", line):
                     continue
@@ -724,15 +726,23 @@ class LogWatcher(RemoteExec):
                             if self.debug_level > 1: self.debug("With: "+ regex)
                             return line
 
-            elif timeout > 0:
+            elif timeout > 0 and end > time.time():
                 time.sleep(1)
-                #time.sleep(0.025)
+                self.__get_lines()
+
+            elif timeout > 0:
+                # Grab any relevant messages that might have arrived since
+                # the last time the buffer was populated
+                self.__get_lines()
+
+                # Don't come back here again
+                timeout = 0
 
             else:
-                self.debug("End of file")
+                self.debug("Single search terminated: start=%d, end=%d, now=%d, lines=%d" % (begin, end, time.time(), lines))
                 return None
 
-        self.debug("Single search timed out: timeout=%d, start=%d, limit=%d, now=%d" % (timeout, now, done, time.time()))
+        self.debug("How did we get here")
         return None
 
     def lookforall(self, timeout=None, allow_multiple_matches=None, silent=False):
