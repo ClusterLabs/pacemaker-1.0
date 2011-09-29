@@ -32,4 +32,5 @@ apitestdir		= 	$(libdir)/@HB_PKG@/stonithdtest
 apitest_PROGRAMS	=	apitest
 apitest_SOURCES		=	apitest.c
 apitest_LDFLAGS		=	-lplumb $(CLUSTERLIBS)  	  \
-				$(top_builddir)/lib/fencing/libstonithd.la
+				$(top_builddir)/lib/fencing/libstonithd.la \
+				$(top_builddir)/lib/common/libcrmcommon.la
