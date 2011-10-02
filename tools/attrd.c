@@ -545,7 +545,7 @@ main(int argc, char ** argv)
 	}
 
 	attr_hash = g_hash_table_new_full(
-		crm_str_hash, g_str_equal, NULL, free_hash_entry);
+		g_str_hash, g_str_equal, NULL, free_hash_entry);
 
 	crm_info("Starting up");
 

@@ -328,8 +328,4 @@ typedef GList* GListPtr;
 #define crm_msg_del(msg) do { if(msg != NULL) { ha_msg_del(msg); msg = NULL; } } while(0)
 
 #define crm_strdup(str) crm_strdup_fn(str, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-
-#define crm_str_hash g_str_hash_traditional
-extern guint g_str_hash_traditional(gconstpointer v);
-
 #endif

@@ -201,10 +201,10 @@ common_unpack(xmlNode * xml_obj, resource_t **rsc,
 	}
 	
 	(*rsc)->parameters = g_hash_table_new_full(
-		crm_str_hash,g_str_equal, g_hash_destroy_str,g_hash_destroy_str);
+		g_str_hash,g_str_equal, g_hash_destroy_str,g_hash_destroy_str);
 	
 	(*rsc)->meta = g_hash_table_new_full(
-		crm_str_hash,g_str_equal, g_hash_destroy_str,g_hash_destroy_str);
+		g_str_hash,g_str_equal, g_hash_destroy_str,g_hash_destroy_str);
 	
 	value = crm_element_value(xml_obj, XML_RSC_ATTR_INCARNATION);
 	if(value) {

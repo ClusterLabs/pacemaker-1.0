@@ -1930,7 +1930,7 @@ xml2list(xmlNode *parent)
 {
 	xmlNode *nvpair_list = NULL;
 	GHashTable *nvpair_hash = g_hash_table_new_full(
-		crm_str_hash, g_str_equal,
+		g_str_hash, g_str_equal,
 		g_hash_destroy_str, g_hash_destroy_str);
 	
 	CRM_CHECK(parent != NULL, return nvpair_hash);

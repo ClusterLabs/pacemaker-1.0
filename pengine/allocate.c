@@ -241,7 +241,7 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 	action = custom_action(rsc, key, task, active_node, TRUE, FALSE, data_set);
 	
 	local_rsc_params = g_hash_table_new_full(
-		crm_str_hash, g_str_equal,
+		g_str_hash, g_str_equal,
 		g_hash_destroy_str, g_hash_destroy_str);
 	
 	get_rsc_attributes(local_rsc_params, rsc, active_node, data_set);
@@ -1300,7 +1300,7 @@ create_notification_boundaries(
     crm_malloc0(n_data, sizeof(notify_data_t));
     n_data->action = action;
     n_data->keys = g_hash_table_new_full(
-	crm_str_hash, g_str_equal, g_hash_destroy_str, g_hash_destroy_str);
+	g_str_hash, g_str_equal, g_hash_destroy_str, g_hash_destroy_str);
     
     if(start) {
 	/* create pre-event notification wrappers */

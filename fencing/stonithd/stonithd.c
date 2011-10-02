@@ -778,7 +778,7 @@ main(int argc, char ** argv)
 						 free_common_op_t);
 
 	/* The following line is only for CTS test with APITEST */
-	reboot_blocked_table = g_hash_table_new_full(crm_str_hash, g_str_equal
+	reboot_blocked_table = g_hash_table_new_full(g_str_hash, g_str_equal
 						, g_free, free_timer);
 
 #if SUPPORT_APPHB
@@ -1646,7 +1646,7 @@ init_client_API_handler(void)
 
 	stonithd_log2(LOG_DEBUG, "init_client_API_handler: begin");
 
-	chanattrs = g_hash_table_new(crm_str_hash, g_str_equal);
+	chanattrs = g_hash_table_new(g_str_hash, g_str_equal);
         g_hash_table_insert(chanattrs, path, sock);
 	apichan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, chanattrs);
 	if (apichan == NULL) {
@@ -1696,7 +1696,7 @@ init_client_API_handler(void)
 
 	stonithd_log2(LOG_DEBUG, "init_client_callback_handler: begin");
 
-	chanattrs = g_hash_table_new(crm_str_hash, g_str_equal);
+	chanattrs = g_hash_table_new(g_str_hash, g_str_equal);
         g_hash_table_insert(chanattrs, path, cbsock);
 	cbchan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, chanattrs);
 	if (cbchan == NULL) {
