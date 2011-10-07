@@ -26,6 +26,7 @@
 #include <utils.h>
 
 #define DELETE_THEN_REFRESH 1 /* The crmd will remove the resource from the CIB itself, making this redundant */
+#define INFINITY_HACK   (INFINITY * -100)
 
 #define VARIANT_NATIVE 1
 #include <lib/pengine/variant.h>
@@ -198,8 +199,12 @@ node_list_update(GListPtr list1, GListPtr list2, const char *attr, int factor, g
 	    crm_debug_2("%s: Filtering %d + %d*%d (factor * score)",
 		      node->details->uname, node->weight, factor, score);
 
+        } else if (node->weight == INFINITY_HACK) {
+            crm_debug_2("%s: Filtering %d + %d*%d (node < 0)",
+                      node->details->uname, node->weight, factor, score);
+
 	} else if(only_positive && new_score < 0 && node->weight > 0) {
-	    node->weight = 1;
+	    node->weight = INFINITY_HACK;
 	    crm_debug_2("%s: Filtering %d + %d*%d (score > 0)",
 		      node->details->uname, node->weight, factor, score);
 
@@ -250,6 +255,16 @@ rsc_merge_weights(resource_t *rsc, const char *rhs, GListPtr nodes, const char *
 	    crm_debug_2("Applying %s", constraint->id);
 	    work = rsc_merge_weights(constraint->rsc_lh, rhs, work, constraint->node_attribute, 
 		multiplier*constraint->score/INFINITY, allow_rollback, only_positive);
+	    );
+    }
+
+    if(only_positive) {
+	slist_iter(
+	    node, node_t, work, lpc,
+
+            if (node->weight == INFINITY_HACK) {
+                node->weight = 1;
+            }
 	    );
     }
 
