@@ -1,0 +1,27 @@
+Allocation scores:
+group_color: grpDRBD allocation score on bl460g1n13: 0
+group_color: grpDRBD allocation score on bl460g1n14: 0
+group_color: dummy01 allocation score on bl460g1n13: -1000000
+group_color: dummy01 allocation score on bl460g1n14: 0
+group_color: dummy02 allocation score on bl460g1n13: 1000000
+group_color: dummy02 allocation score on bl460g1n14: 0
+group_color: dummy03 allocation score on bl460g1n13: 0
+group_color: dummy03 allocation score on bl460g1n14: 0
+clone_color: msDRBD allocation score on bl460g1n13: 1000000
+clone_color: msDRBD allocation score on bl460g1n14: 0
+clone_color: prmDRBD:0 allocation score on bl460g1n13: 1000000
+clone_color: prmDRBD:0 allocation score on bl460g1n14: 0
+clone_color: prmDRBD:1 allocation score on bl460g1n13: 0
+clone_color: prmDRBD:1 allocation score on bl460g1n14: 1000000
+native_color: prmDRBD:0 allocation score on bl460g1n13: 1000000
+native_color: prmDRBD:0 allocation score on bl460g1n14: 0
+native_color: prmDRBD:1 allocation score on bl460g1n13: -1000000
+native_color: prmDRBD:1 allocation score on bl460g1n14: 1000000
+prmDRBD:1 promotion score on bl460g1n14: 10100
+prmDRBD:0 promotion score on bl460g1n13: 1
+native_color: dummy01 allocation score on bl460g1n13: -1000000
+native_color: dummy01 allocation score on bl460g1n14: 1000000
+native_color: dummy02 allocation score on bl460g1n13: -1000000
+native_color: dummy02 allocation score on bl460g1n14: 0
+native_color: dummy03 allocation score on bl460g1n13: -1000000
+native_color: dummy03 allocation score on bl460g1n14: 0
