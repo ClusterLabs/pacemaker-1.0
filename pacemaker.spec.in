@@ -235,9 +235,7 @@ rm -rf %{buildroot}
 %exclude %{pcmk_docdir}/COPYING
 %exclude %{pcmk_docdir}/COPYING.LIB
 
-%doc %{pcmk_docdir}/crm_cli.txt
-%doc %{pcmk_docdir}/crm_fencing.txt
-%doc %{pcmk_docdir}/README.hb2openais
+%doc %{pcmk_docdir}
 %doc %{_mandir}/man8/*.8*
 %doc COPYING
 %doc AUTHORS
