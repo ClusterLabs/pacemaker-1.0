@@ -43,10 +43,14 @@ log_patterns="CRIT: ERROR:"
 usage() {
 
 cat<<EOF
-usage: `basename $0` -f {YYYY-M-D H:M:S} [-t {YYYY-M-D H:M:S}] [additional options] [dest]
+crm_report - Create a tarball containing everything needed when reporting cluster problems
+ 
 
+Usage: `basename $0` -f "YYYY-M-D H:M:S" [-t "YYYY-M-D H:M:S"] [additional options] [dest]
+
+Options:
   -v			increase verbosity
-  -f, --from time	time to start from: YYYY-M-D H:M:S
+  -f, --from time	time to start from: "YYYY-M-D H:M:S"  (do not forget the quotes)
   -t, --to time		time to finish at (default: now)
   -T, --cts test	CTS test or set of tests to extract
       --cts-log		CTS master logfile
@@ -68,13 +72,16 @@ usage: `basename $0` -f {YYYY-M-D H:M:S} [-t {YYYY-M-D H:M:S}] [additional optio
   --dest       		a custom destination directory/file
   dest			a custom destination directory/file
 
-example:  `basename $0` -f "2011-12-14 13:05:00" unexplained-apache-failure
+Examples: 
+   crm_report -f "2011-12-14 13:05:00" unexplained-apache-failure
+   crm_report -f 2011-12-14 -t 2011-12-15 something-that-took-multiple days
+   crm_report -f 13:05:00   -t 13:12:00   brief-outage 
 EOF
 }
 
 case "$1" in
     -v|--version)   echo "@VERSION@ - @BUILD_VERSION@"; exit 0;;
-    --features)     echo "@VERSION@ - @BUILD_VERSION@: @PKG_FEATURES@"; exit 0;;
+    --features)     echo "@VERSION@ - @BUILD_VERSION@: @PCMK_FEATURES@"; exit 0;;
     --|-h|--help) usage; exit 0;;
 esac
 
@@ -149,10 +156,12 @@ collect_data() {
 	dumplogset "$masterlog" $start $end > "$l_base/$HALOG_F"
     fi
 
-    cat<<EOF>$l_base/.env
+    for node in $nodes; do
+	cat<<EOF>$l_base/.env
 LABEL="$label"
 REPORT_HOME="$r_base"
 REPORT_MASTER="$host"
+REPORT_TARGET="$node"
 LOG_START=$start
 LOG_END=$end
 REMOVE=1
@@ -164,15 +173,11 @@ SEARCH_LOGS=$search_logs
 verbose=$verbose
 EOF
 
-    # local overrides
-    cp $l_base/.env $l_base/.env.local
-    cat<<EOF>>$l_base/.env.local
+	if [ $host = $node ]; then
+	    cat<<EOF>>$l_base/.env
 REPORT_HOME="$l_base"
 EOF
-
-    for node in $nodes; do
-	if [ `uname -n` = $node ]; then
-	    cat $l_base/.env.local $report_data/report.common $report_data/report.collector > $l_base/collector
+	    cat $l_base/.env $report_data/report.common $report_data/report.collector > $l_base/collector
 	    bash $l_base/collector
 	else
 	    cat $l_base/.env $report_data/report.common $report_data/report.collector \
@@ -360,6 +365,10 @@ getnodes() {
 	cluster=`get_cluster_type`
     else
 	cluster=$1
+    fi
+
+    if [ -z $HA_STATE_DIR ]; then
+	HA_STATE_DIR=/var/lib/heartbeat
     fi
 
     cluster_cf=`find_cluster_cf $cluster`

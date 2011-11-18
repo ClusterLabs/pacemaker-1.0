@@ -22,7 +22,7 @@ dnl     checks for system services
 AC_INIT(pacemaker, 1.0.11, pacemaker@oss.clusterlabs.org)
 CRM_DTD_VERSION="1.0"
 
-PKG_FEATURES=""
+PCMK_FEATURES=""
 HB_PKG=heartbeat
 
 AC_CONFIG_AUX_DIR(.)
@@ -520,17 +520,17 @@ fi
 
 AM_CONDITIONAL(BUILD_HELP, test x"${HELP2MAN}" != x"")
 if test x"${HELP2MAN}" != x""; then
-   PKG_FEATURES="$PKG_FEATURES manpages"
+   PCMK_FEATURES="$PCMK_FEATURES manpages"
 fi
 
 AM_CONDITIONAL(BUILD_ASCIIDOC, test x"${ASCIIDOC}" != x"")
 if test x"${ASCIIDOC}" != x""; then
-   PKG_FEATURES="$PKG_FEATURES asciidoc"
+   PCMK_FEATURES="$PCMK_FEATURES asciidoc"
 fi
 
 AM_CONDITIONAL(BUILD_DOCBOOK, test ${PUBLICAN} != x"")
 if test ${PUBLICAN} != x""; then
-   PKG_FEATURES="$PKG_FEATURES publican"
+   PCMK_FEATURES="$PCMK_FEATURES publican"
 fi
 
 dnl ===============================================
@@ -807,7 +807,7 @@ if test X"$CURSESLIBS" = X"" -a "$ac_cv_header_curses_curses_h" = "yes"; then
 fi
 
 if test "x$CURSESLIBS" != "x"; then
-   PKG_FEATURES="$PKG_FEATURES ncurses"
+   PCMK_FEATURES="$PCMK_FEATURES ncurses"
 fi
 
 dnl Check for printw() prototype compatibility
@@ -1061,7 +1061,7 @@ else
    LCRSODIR="$libdir"
 fi
 
-PKG_FEATURES="$PKG_FEATURES$STACKS"
+PCMK_FEATURES="$PCMK_FEATURES$STACKS"
 
 AC_MSG_CHECKING(for supported stacks)
 if test x"$STACKS" = x; then
@@ -1139,7 +1139,7 @@ else
 fi
 
 if test $SUPPORT_SNMP = 1; then
-   PKG_FEATURES="$PKG_FEATURES snmp"
+   PCMK_FEATURES="$PCMK_FEATURES snmp"
 fi
 
 AC_SUBST(SNMPLIBS)
@@ -1198,7 +1198,7 @@ else
 fi
 
 if test $SUPPORT_ESMTP = 1; then
-   PKG_FEATURES="$PKG_FEATURES libesmtp"
+   PCMK_FEATURES="$PCMK_FEATURES libesmtp"
 fi
 
 AC_SUBST(ESMTPLIBS)
@@ -1438,7 +1438,8 @@ AC_SUBST(MAKE)
 AC_SUBST(LIBTOOL)
 AC_SUBST(QUIET_MAKE_OPTS)
 AC_SUBST(QUIET_LIBTOOL_OPTS)
-AC_DEFINE_UNQUOTED(CRM_FEATURES, "$PKG_FEATURES", Set of enabled features)
+AC_SUBST(PCMK_FEATURES)
+AC_DEFINE_UNQUOTED(CRM_FEATURES, "$PCMK_FEATURES", Set of enabled features)
 
 dnl The Makefiles and shell scripts we output
 AC_CONFIG_FILES(Makefile				        \
