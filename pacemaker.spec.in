@@ -4,7 +4,7 @@
 
 %global specversion 1
 %global upstream_version 00c6e47d32f3
-%global upstream_prefix pacemaker-
+%global upstream_prefix pacemaker
 
 # Compatibility macros for distros (fedora) that don't provide Python macros by default
 # Do this instead of trying to conditionally %include %{_rpmconfigdir}/macros.python
@@ -46,7 +46,7 @@ Release:	%{pcmk_release}%{?dist}
 License:	GPLv2+ and LGPLv2+
 Url:		http://www.clusterlabs.org
 Group:		System Environment/Daemons
-Source0:	%{upstream_prefix}%{?upstream_version}.tar.bz2
+Source0:	%{upstream_prefix}-%{?upstream_version}.tar.bz2
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 AutoReqProv:	on
 Requires(pre):	cluster-glue
@@ -150,7 +150,7 @@ when related resources fail and can be configured to periodically check
 resource health.
 
 %prep
-%setup -q -n %{upstream_prefix}%{?upstream_version}
+%setup -q -n %{upstream_prefix}-%{?upstream_version}
 
 %build
 ./autogen.sh

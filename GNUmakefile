@@ -21,11 +21,12 @@
 PACKAGE		?= pacemaker
 
 # Force 'make dist' to be consistent with 'make export' 
-distdir			= $(PACKAGE)-$(TAG)
+distprefix		= ClusterLabs-$(PACKAGE)
+distdir			= $(distprefix)-$(TAG)
 TARFILE			= $(distdir).tar.bz2
 DIST_ARCHIVES		= $(TARFILE)
 
-LAST_RELEASE		?= $(firstword $(shell hg tags| grep Pacemaker | head -n 1))
+LAST_RELEASE		?= $(firstword $(shell git tag -l | grep Pacemaker | head -n 1))
 
 RPM_ROOT	= $(shell pwd)
 RPM_OPTS	= --define "_sourcedir $(RPM_ROOT)" 	\
@@ -42,7 +43,7 @@ MOCK_OPTIONS	?= --resultdir=$(RPM_ROOT)/mock
 getdistro = $(shell test -e /etc/SuSE-release || echo fedora; test -e /etc/SuSE-release && echo suse)
 PROFILE ?= $(shell rpm --eval fedora-%{fedora}-%{_arch})
 DISTRO  ?= $(call getdistro)
-TAG     ?= $(firstword $(shell hg id -i | tr '+' ' '))
+TAG     ?= $(shell git log --pretty="format:%h" -n 1)
 WITH    ?= 
 
 BUILD_COUNTER	?= build.counter
@@ -55,12 +56,13 @@ initialize:
 export: 
 	rm -f $(PACKAGE)-scratch.tar.* $(PACKAGE)-tip.tar.*
 	if [ ! -f $(TARFILE) ]; then						\
+	    rm -f $(PACKAGE).tar.*;						\
 	    if [ $(TAG) = scratch ]; then 					\
-		hg commit -m "DO-NOT-PUSH";					\
-		hg archive --prefix $(distdir) -t tbz2 -r tip $(TARFILE);	\
-		hg rollback; 							\
+		git commit -m "DO-NOT-PUSH" -a;					\
+		git archive --prefix=$(distdir)/ HEAD | gzip > $(TARFILE);	\
+		git reset --mixed HEAD^; 					\
 	    else								\
-		hg archive --prefix $(distdir) -t tbz2 -r $(TAG) $(TARFILE);	\
+		git archive --prefix=$(distdir)/ $(TAG) | gzip > $(TARFILE);	\
 	    fi;									\
 	    echo `date`: Rebuilt $(TARFILE);					\
 	else									\
@@ -102,6 +104,7 @@ srpm-%:	export $(PACKAGE)-%.spec
 		sed -i.sed 's/global\ specversion.*/global\ specversion\ $(COUNT)/' $(PACKAGE).spec;	\
 	fi
 	sed -i.sed 's/global\ upstream_version.*/global\ upstream_version\ $(TAG)/' $(PACKAGE).spec
+	sed -i.sed 's/global\ upstream_prefix.*/global\ upstream_prefix\ $(distprefix)/' $(PACKAGE).spec
 	rpmbuild -bs --define "dist .$*" $(RPM_OPTS) $(WITH)  $(PACKAGE).spec
 
 # eg. WITH="--with cman" make rpm
