@@ -675,14 +675,14 @@ class LogWatcher(RemoteExec):
         self.returnonlymatch = onlymatch
 
     def __get_lines(self):
-            if not len(self.file_list):
-                raise ValueError("No sources to read from")
+        if not len(self.file_list):
+            raise ValueError("No sources to read from")
 
-            for f in self.file_list:
-                lines = f.next()
+        for f in self.file_list:
+            lines = f.next()
             if len(lines):
                 self.line_cache.extend(lines)
-
+        
     def look(self, timeout=None, silent=False):
         '''Examine the log looking for the given patterns.
         It starts looking from the place marked by setwatch().
@@ -726,7 +726,7 @@ class LogWatcher(RemoteExec):
                             if self.debug_level > 1: self.debug("With: "+ regex)
                             return line
 
-            elif timeout > 0 and end > time.time():
+            elif timeout > 0 and end > time.time(): 
                 time.sleep(1)
                 self.__get_lines()
 

@@ -24,7 +24,7 @@ Licensed under the GNU GPL.
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 from UserDict import UserDict
-import sys, types, string, string, signal, os
+import sys, types, string, string, signal, os, socket
 
 pdir=os.path.dirname(sys.path[0])
 sys.path.insert(0, pdir) # So that things work from the source directory
@@ -70,7 +70,6 @@ class LabEnvironment(CtsLab):
         CtsLab.__init__(self)
 
         #  Get a random seed for the random number generator.
-        self["DoStonith"] = 1
         self["DoStandby"] = 1
         self["DoFencing"] = 1
         self["XmitLoss"] = "0.0"
@@ -136,7 +135,7 @@ def usage(arg, status=1):
     print "\t [--recv-loss lost-rate(0.0-1.0)]" 
     print "\t [--standby (1 | 0 | yes | no)]" 
     print "\t [--fencing (1 | 0 | yes | no)]" 
-    print "\t [--stonith (1 | 0 | yes | no)]" 
+    print "\t [--stonith (1 | 0 | yes | no | rhcs | lha)]" 
     print "\t [--stonith-type type]" 
     print "\t [--stonith-args name=value]" 
     print "\t [--bsc]" 
@@ -222,6 +221,16 @@ if __name__ == '__main__':
 
        elif args[i] == "--qarsh":
            Environment.rsh.enable_qarsh()
+           rsh.enable_qarsh()
+
+       elif args[i] == "--fencing":
+           skipthis=1
+           if args[i+1] == "1" or args[i+1] == "yes":
+               Environment["DoFencing"] = 1
+           elif args[i+1] == "0" or args[i+1] == "no":
+               Environment["DoFencing"] = 0
+           else:
+               usage(args[i+1])
 
        elif args[i] == "--stonith":
            skipthis=1
@@ -259,6 +268,8 @@ if __name__ == '__main__':
                Environment["DoFencing"]=1
                Environment["stonith-type"] = "fence_apc"
                Environment["stonith-params"] = "ipaddr=west-apc,login=apc,passwd=apc,pcmk_host_map=west-01:2;west-02:3;west-03:4;west-04:5;west-05:6;west-06:7;west-07:9;west-08:10;west-09:11;west-10:12;west-11:13;west-12:14;west-13:15;west-14:18;west-15:17;west-16:19;"
+           else:
+               usage(args[i+1])
 
        elif args[i] == "--stonith-type":
            Environment["stonith-type"] = args[i+1]
