@@ -1509,7 +1509,7 @@ dnl *****************
 AC_MSG_RESULT([])
 AC_MSG_RESULT([$PACKAGE configuration:])
 AC_MSG_RESULT([  Version                  = ${VERSION} (Build: $BUILD_VERSION)])
-AC_MSG_RESULT([  Features                 =${PKG_FEATURES}])
+AC_MSG_RESULT([  Features                 =${PCMK_FEATURES}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([  Prefix                   = ${prefix}])
 AC_MSG_RESULT([  Executables              = ${sbindir}])
