@@ -40,7 +40,7 @@ Add RecourceRecover testcase Zhao Kai <zhaokai@cn.ibm.com>
 
 import time, os, re, types, string, tempfile, sys
 from stat import *
-from cts import CTS
+import CTS
 from CTSaudits import *
 
 AllTestClasses = [ ]

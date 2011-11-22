@@ -38,17 +38,17 @@ try:
     from CTSscenarios import *
 
 except ImportError:
-    sys.stderr.write("abort: couldn't find cts libraries in [%s]\n" %
-                     ' '.join(sys.path))
+    sys.stderr.write("abort: couldn't find cts libraries in [\n\t%s\n]\n" %
+                     '\n\t'.join(sys.path))
     sys.stderr.write("(check your install and PYTHONPATH)\n")
 
     # Now do it again to get more details 
-    from cts.CTSvars    import *
-    from cts.CM_ais     import *
-    from cts.CM_lha     import crm_lha
-    from cts.CTSaudits  import AuditList
-    from cts.CTStests   import TestList
-    from cts.CTSscenarios import *
+    from CTSvars    import *
+    from CM_ais     import *
+    from CM_lha     import crm_lha
+    from CTSaudits  import AuditList
+    from CTStests   import TestList
+    from CTSscenarios import *
     sys.exit(-1)
 
 cm = None

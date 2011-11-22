@@ -26,7 +26,7 @@ Additional Audits, Revised Start action, Default Configuration:
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 import os, sys, warnings
-from cts          import CTS
+import CTS
 from CTSvars  import *
 from CTS      import *
 from CIB      import *
