@@ -1,3 +1,50 @@
+* Wed Nov 23 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.12-1
+- Update source tarball to Git revision: 6118778
+- Statistics:
+  Changesets: 96
+  Diff:       121 files changed, 8617 insertions(+), 988 deletions(-)
+
+High: cib: Call gnutls_bye() and shutdown() when disconnecting from remote TLS connections
+High: cib: Remove disconnected remote connections from mainloop
+High: crmd: Cancel timers for actions that were pending on dead nodes
+High: crmd: Do not wait for actions that were pending on dead nodes
+High: crmd: Ensure we do not attempt to perform action on failed nodes
+High: PE: Correctly recognise which recurring operations are currently active
+High: PE: Demote from Master does not clear previous errors
+High: PE: Ensure restarts due to definition changes cause the start action to be re-issued not probes
+High: PE: Ensure role is preserved for unmanaged resources
+High: PE: Ensure unmanaged resources have the correct role set so the correct monitor operation is chosen
+High: PE: Move master based on failure of colocated group
+High: pengine: Correctly determine the state of multi-state resources with a partial operation history
+High: PE: Only allocate master/slave resources once
+High: Shell: implement -w,--wait option to wait for the transition to finish
+High: Shell: repair template list command
+Medium: agents: ping - Support timeouts with units
+Medium: ais: Bug lf#2587 - Prevent memory leak in error path
+Medium: Build: Fix construction of Pacemaker Explained
+Medium: cib: Attempt a graceful sign-off for remote TLS connections
+Medium: cib: Bug lf#2229 - Use SIGPIPE for re-enabling disk writes after an error
+Medium: Core: Amend 15782:5e2266d8894f to build stonithdtest correctly.
+Medium: core: Don't try to print unprintable option values in crm_help
+Medium: Core: Treat GNUTLS_E_UNEXPECTED_PACKET_LENGTH as normal termination of a TLS session
+Medium: Core: Use pre-glib2-2.28 version of g_str_hash to ensure consistent score calculation for clone instances
+Medium: extra: Incorporate fping functionality from Dan Urist
+Medium: Extras: ping - use a fixed backoff of 1.0 to avoid pushing complex timeout calculations to the user
+Medium: PE: Bug lf#2606 - A demote operation is implied by the stonith operation
+Medium: PE: Indicate resource failures even if on-fail="ignore"
+Medium: PE: Resolve memory leak when retrieving failure counts
+Medium: PE: Set reasonable limits for the number of input files saved
+Medium: Resolve a number of coverity leak defects
+Medium: Shell: Check for violations of uniqueness for instance parameters during commit Implemented in CibObjectSet.semantic_check()
+Medium: Shell: invoke cibadmin with --force when requested by user
+Medium: Shell: print warning if start or stop interval is not zero
+Medium: Shell: repair readline history file save
+Medium: Shell: suppress warning when start or stop interval is specified with units
+Medium: Tools: attrd - Do not initiate updates for deleted attributes
+Medium: tools: Backport crm_report fixes from 1.1
+Medium: tools: Backport updates to crm_report
+Medium: Tools: Bug lf#2621 - Correctly log corosync node IDs
+
 * Fri Apr 29 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.11-1
 - Update source tarball to revision: bc6104efe006 (stable-1.0) tip
 - Statistics:
@@ -402,7 +449,7 @@
 - No longer remove RPATH data, it prevents us finding libperl.so and no other
   libraries were being hardcoded
 - Compile in support for heartbeat
-- Conditionally add heartbeat-devel and corosynclib-devel to the -devel requirements 
+- Conditionally add heartbeat-devel and corosynclib-devel to the -devel requirements
   depending on which stacks are supported
 
 * Mon Aug 17 2009 Andrew Beekhof <andrew@beekhof.net> - 1.0.5-1
@@ -434,7 +481,7 @@
 * Fri Jul  24 2009 Andrew Beekhof <andrew@beekhof.net> - 1.0.4-3
 - Initial Fedora checkin
 - Include an AUTHORS and license file in each package
-- Change the library package name to pacemaker-libs to be more 
+- Change the library package name to pacemaker-libs to be more
   Fedora compliant
 - Remove execute permissions from xml related files
 - Reference the new cluster-glue devel package name

@@ -26,7 +26,7 @@ distdir			= $(distprefix)-$(TAG)
 TARFILE			= $(distdir).tar.bz2
 DIST_ARCHIVES		= $(TARFILE)
 
-LAST_RELEASE		?= $(firstword $(shell git tag -l | grep Pacemaker | head -n 1))
+LAST_RELEASE		?= $(shell git tag -l | grep Pacemaker | sort -Vr | head -n 1)
 
 RPM_ROOT	= $(shell pwd)
 RPM_OPTS	= --define "_sourcedir $(RPM_ROOT)" 	\
@@ -141,14 +141,14 @@ global-www: global-html
 	rsync -avzxlSD --progress HTML/ root@www.clusterlabs.org:/var/lib/global/$(PACKAGE)
 
 changes:
-	@printf "\n* `date +"%a %b %d %Y"` `hg showconfig ui.username` $(VERSION)-1"
-	@printf "\n- Update source tarball to revision: `hg id`"
+	@printf "\n* `date +"%a %b %d %Y"` `git config user.name` <`git config user.email`> $(VERSION)-1"
+	@printf "\n- Update source tarball to Git revision: `git log --pretty=format:%h -n 1`"
 	@printf "\n- Statistics:\n"
-	@printf "  Changesets: `hg log -M --template "{desc|firstline|strip}\n" -r $(LAST_RELEASE):tip | wc -l`\n"
+	@printf "  Changesets: `git log --pretty=format:'%h' --abbrev-commit -M $(LAST_RELEASE)..HEAD | wc -l`\n"
 	@printf "  Diff:      "
-	@hg diff -r $(LAST_RELEASE):tip | diffstat | tail -n 1
+	@git diff $(LAST_RELEASE)..HEAD | diffstat | tail -n 1
 	@printf "\n- Changes since $(LAST_RELEASE)\n"
-	@hg log -M --template "  + {desc|firstline|strip}\n" -r $(LAST_RELEASE):tip | grep -v -e Dev: -e Low: -e Hg: -e "Added tag.*for changeset" | sort -uf 
+	@git log --pretty=format:'%s' --abbrev-commit -M $(LAST_RELEASE)..HEAD | sed 's:(transplanted.*::' | grep -v -e Dev: -e Low: -e Hg: -e "Added tag.*for changeset" | sort -uf 
 	@printf "\n"
 
 rel-tags: tags

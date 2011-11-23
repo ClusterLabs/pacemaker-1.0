@@ -41,7 +41,7 @@
 
 Name:		pacemaker
 Summary:	Scalable High-Availability cluster resource manager
-Version:	1.0.11
+Version:	1.0.12
 Release:	%{pcmk_release}%{?dist}
 License:	GPLv2+ and LGPLv2+
 Url:		http://www.clusterlabs.org
@@ -273,11 +273,21 @@ rm -rf %{buildroot}
 %doc AUTHORS
 
 %changelog
+* Wed Nov 23 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.12-1
+- Update source tarball to Git revision: 6118778
+- Statistics:
+  Changesets: 96
+  Diff:       121 files changed, 8617 insertions(+), 988 deletions(-)
+
+- See https://github.com/ClusterLabs/pacemaker-1.0/blob/master/ChangeLog for further details
+
 * Fri Apr 29 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.11-1
 - Update source tarball to revision: bc6104efe006 (stable-1.0) tip
 - Statistics:
   Changesets: 85
   Diff:       500 files changed, 69642 insertions(+), 58270 deletions(-)
+
+- See http://hg.clusterlabs.org/pacemaker/stable-1.0/file/tip/ChangeLog for further details
 
 * Fri Nov 12 2010 Andrew Beekhof <andrew@beekhof.net> 1.0.10-1
 - Update source tarball to revision: 4172c2ad2756 (stable-1.0) tip
