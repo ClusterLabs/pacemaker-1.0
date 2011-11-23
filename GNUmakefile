@@ -70,6 +70,8 @@ export:
 	fi
 
 $(PACKAGE)-opensuse.spec: $(PACKAGE)-suse.spec
+	cp $^ $@
+	@echo Rebuilt $@
 
 $(PACKAGE)-suse.spec: $(PACKAGE).spec.in
 	rm -f $@
@@ -88,6 +90,7 @@ $(PACKAGE)-suse.spec: $(PACKAGE).spec.in
 	sed -i.sed s:\#global\ py_sitedir:\%global\ py_sitedir:g $@
 	sed -i.sed s:docbook-style-xsl:docbook-xsl-stylesheets:g $@
 	sed -i.sed s:libtool-ltdl-devel::g $@
+	sed -i.sed s:libexecdir:libdir:g $@
 	@echo Rebuilt $@
 
 # Works for all fedora based distros
