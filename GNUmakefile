@@ -47,7 +47,7 @@ TAG     ?= $(shell git log --pretty="format:%h" -n 1)
 WITH    ?= 
 
 BUILD_COUNTER	?= build.counter
-COUNT           = $(shell test ! -e $(BUILD_COUNTER) || echo $(shell expr 1 + $(shell cat $(BUILD_COUNTER))))
+COUNT           ?= $(shell test ! -e $(BUILD_COUNTER) || echo $(shell expr 1 + $(shell cat $(BUILD_COUNTER))))
 
 initialize:
 	./autogen.sh
