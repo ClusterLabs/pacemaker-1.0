@@ -82,7 +82,7 @@ create_tls_session(int csock, int type /* GNUTLS_SERVER, GNUTLS_CLIENT */)
 	    case GNUTLS_SERVER:
 		gnutls_credentials_set(*session, GNUTLS_CRD_ANON, anon_cred_s);
 #ifndef HAVE_GNUTLS_PRIORITY_SET_DIRECT
-		gnutls_dh_set_prime_bits (session, 1024);
+		gnutls_dh_set_prime_bits (*session, 1024);
 #endif
 		break;
 	    case GNUTLS_CLIENT:
