@@ -47,7 +47,8 @@ TAG     ?= $(shell git log --pretty="format:%h" -n 1)
 WITH    ?= 
 
 BUILD_COUNTER	?= build.counter
-COUNT           ?= $(shell test ! -e $(BUILD_COUNTER) || echo $(shell expr 1 + $(shell cat $(BUILD_COUNTER))))
+LAST_COUNT      = $(shell test ! -e $(BUILD_COUNTER) && echo 0; test -e $(BUILD_COUNTER) && cat $(BUILD_COUNTER))
+COUNT           = $(shell expr 1 + $(LAST_COUNT))
 
 initialize:
 	./autogen.sh
@@ -104,8 +105,8 @@ srpm-%:	export $(PACKAGE)-%.spec
 	cp $(PACKAGE)-$*.spec $(PACKAGE).spec
 	if [ -e $(BUILD_COUNTER) ]; then								\
 		echo $(COUNT) > $(BUILD_COUNTER);							\
-		sed -i.sed 's/global\ specversion.*/global\ specversion\ $(COUNT)/' $(PACKAGE).spec;	\
 	fi
+	sed -i.sed 's/global\ specversion.*/global\ specversion\ $(COUNT)/' $(PACKAGE).spec;	\
 	sed -i.sed 's/global\ upstream_version.*/global\ upstream_version\ $(TAG)/' $(PACKAGE).spec
 	sed -i.sed 's/global\ upstream_prefix.*/global\ upstream_prefix\ $(distprefix)/' $(PACKAGE).spec
 	rpmbuild -bs --define "dist .$*" $(RPM_OPTS) $(WITH)  $(PACKAGE).spec
