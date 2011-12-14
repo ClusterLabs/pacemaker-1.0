@@ -92,6 +92,7 @@ def setup_aliases(obj):
             if obj.help_table:
                 obj.help_table[alias] = obj.help_table[cmd]
             obj.cmd_table[alias] = obj.cmd_table[cmd]
+            obj.rev_alias_table[alias] = cmd
 
 def os_types_list(path):
     l = []
