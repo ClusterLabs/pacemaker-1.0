@@ -1035,10 +1035,6 @@ void native_rsc_location(resource_t *rsc, rsc_to_node_t *constraint)
 {
 	GListPtr or_list;
 
-	crm_debug_2("Applying %s (%s) to %s", constraint->id,
-		    role2text(constraint->role_filter), rsc->id);
-
-	/* take "lifetime" into account */
 	if(constraint == NULL) {
 		pe_err("Constraint is NULL");
 		return;
@@ -1046,9 +1042,14 @@ void native_rsc_location(resource_t *rsc, rsc_to_node_t *constraint)
 	} else if(rsc == NULL) {
 		pe_err("LHS of rsc_to_node (%s) is NULL", constraint->id);
 		return;
+	}
 
-	} else if(constraint->role_filter > 0
-		  && constraint->role_filter != rsc->next_role) {
+	crm_debug_2("Applying %s (%s) to %s", constraint->id,
+		    role2text(constraint->role_filter), rsc->id);
+
+	/* take "lifetime" into account */
+	if(constraint->role_filter > 0
+	   && constraint->role_filter != rsc->next_role) {
 		crm_debug("Constraint (%s) is not active (role : %s)",
 			  constraint->id, role2text(constraint->role_filter));
 		return;
