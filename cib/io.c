@@ -551,6 +551,9 @@ write_cib_contents(gpointer p)
 	char *primary_file = crm_concat(cib_root, "cib.xml", '/');
 	char *digest_file = crm_concat(primary_file, "sig", '.');
 	
+	char *backup_file = NULL;
+	char *backup_digest = NULL;
+
 	/* Always write out with num_updates=0 */
 	crm_xml_add(the_cib, XML_ATTR_NUMUPDATES, "0");
 	
@@ -561,8 +564,6 @@ write_cib_contents(gpointer p)
 	need_archive = (stat(primary_file, &buf) == 0);
 	if (need_archive) {
 	    int rc = 0;
-	    char *backup_file = NULL;
-	    char *backup_digest = NULL;
 	    int seq = get_last_sequence(cib_root, CIB_SERIES);
 
 	    /* check the admin didnt modify it underneath us */
@@ -597,9 +598,6 @@ write_cib_contents(gpointer p)
 	    sync_directory(cib_root);
 
 	    crm_info("Archived previous version as %s", backup_file);	
-	    
-	    crm_free(backup_digest);
-	    crm_free(backup_file);
 	}
 
 	/* Given that we discard the status section on startup
@@ -648,7 +646,9 @@ write_cib_contents(gpointer p)
 	sync_directory(cib_root);
 
   cleanup:
+	crm_free(backup_digest);
 	crm_free(primary_file);
+	crm_free(backup_file);
 	crm_free(digest_file);
 	crm_free(digest);
 	crm_free(tmp2);
