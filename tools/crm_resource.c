@@ -1126,7 +1126,6 @@ main(int argc, char **argv)
 	cib_t *	cib_conn = NULL;
 	enum cib_errors rc = cib_ok;
 
-	gboolean need_cib = TRUE;
 	int option_index = 0;
 	int argerr = 0;
 	int flag;
@@ -1185,7 +1184,6 @@ main(int argc, char **argv)
 				break;
 			case 'R':
 			case 'P':
-				need_cib = FALSE;
 				rsc_cmd = flag;
 				break;		
 			case 'L':
@@ -1254,21 +1252,20 @@ main(int argc, char **argv)
 		cib_options |= cib_quorum_override;
 	}
 
-	if(need_cib) {
+	if (rsc_cmd != 'P') {
 		resource_t *rsc = NULL;
+
+		cib_conn = cib_new();
+		rc = cib_conn->cmds->signon(cib_conn, crm_system_name, cib_command);
+		if (rc != cib_ok) {
+			CMD_ERR("Error signing on to the CIB service: %s\n", cib_error2string(rc));
+			return rc;
+		}
+
 		if(xml_file != NULL) {
 		    cib_xml_copy = filename2xml(xml_file);
 
 		} else {
-			cib_conn = cib_new();
-			rc = cib_conn->cmds->signon(
-				cib_conn, crm_system_name, cib_command);
-			if(rc != cib_ok) {
-				CMD_ERR("Error signing on to the CIB service: %s\n",
-					cib_error2string(rc));
-				return rc;
-			}
-
 			cib_xml_copy = get_cib_copy(cib_conn);
 		}
 		
