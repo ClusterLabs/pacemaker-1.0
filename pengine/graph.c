@@ -372,19 +372,27 @@ shutdown_constraints(
 	/* add the stop to the before lists so it counts as a pre-req
 	 * for the shutdown
 	 */
-	slist_iter(
-		rsc, resource_t, node->details->running_rsc, lpc,
+	GListPtr lpc = NULL;
 
-		if(is_not_set(rsc->flags, pe_rsc_managed)) {
+	for (lpc = data_set->actions; lpc != NULL; lpc = lpc->next) {
+		action_t *action = (action_t *) lpc->data;
+
+		if (action->rsc == NULL || action->node == NULL) {
+			continue;
+		} else if(is_not_set(action->rsc->flags, pe_rsc_managed)) {
+			continue;
+		} else if(action->node->details != node->details) {
+			continue;
+		} else if(safe_str_neq(action->task, RSC_STOP)) {
 			continue;
 		}
 		
-		custom_action_order(
-			rsc, stop_key(rsc), NULL,
+		crm_debug("Ordering %s before shutdown on %s", action->uuid, node->details->uname);
+		custom_action_order(action->rsc, NULL, action,
 			NULL, crm_strdup(CRM_OP_SHUTDOWN), shutdown_op,
 			pe_order_implies_left, data_set);
 
-		);	
+	}
 
 	return TRUE;	
 }
