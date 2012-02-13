@@ -124,6 +124,9 @@ rpm:	srpm
 	@echo To create custom builds, edit the flags and options in $(PACKAGE).spec first
 	rpmbuild $(RPM_OPTS) $(WITH) --rebuild $(RPM_ROOT)/*.src.rpm
 
+abi:   abi-check $(LAST_RELEASE) $(TAG)
+abi-www:       abi-check -u $(LAST_RELEASE) $(TAG)
+
 scratch:
 	make TAG=scratch mock
 
