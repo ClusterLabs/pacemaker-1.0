@@ -28,6 +28,9 @@ COMMONLIBS	= 							\
 headerdir               = $(pkgincludedir)/crm
 header_HEADERS		= attrd.h
 
+pcmkdir			= $(datadir)/$(PACKAGE)
+pcmk_DATA		= report.common report.collector
+
 EXTRA_DIST		= $(sbin_SCRIPTS)
 
 halibdir		= $(CRM_DAEMON_DIR)
@@ -35,7 +38,7 @@ halib_SCRIPTS		= haresources2cib.py hb2openais.sh
 halib_PROGRAMS		= attrd pingd
 halib_PYTHON		= crm_primitive.py hb2openais-helper.py
 
-sbin_PROGRAMS		= crmadmin cibadmin crm_node crm_attribute crm_resource crm_verify \
+sbin_PROGRAMS		= crm_report crmadmin cibadmin crm_node crm_attribute crm_resource crm_verify \
 			 crm_uuid crm_shadow attrd_updater crm_diff crm_mon iso8601
 
 testdir			= $(datadir)/$(PACKAGE)/tests/cli
