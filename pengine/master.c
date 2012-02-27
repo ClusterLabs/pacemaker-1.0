@@ -869,7 +869,7 @@ void master_rsc_colocation_rh(
 		 */
 		if(constraint->role_lh != RSC_ROLE_MASTER
 		   || constraint->role_rh != RSC_ROLE_MASTER) {
-		    if(constraint->score > 0) {
+		    if(constraint->score >= INFINITY) {
 			rsc_lh->allowed_nodes = node_list_exclude(rsc_lh->allowed_nodes, rhs, TRUE);
 		    }
 		}
