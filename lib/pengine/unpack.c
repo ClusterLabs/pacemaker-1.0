@@ -847,7 +847,7 @@ static resource_t *find_clone(pe_working_set_t *data_set, node_t *node, resource
     int len = 0;
     resource_t *rsc = NULL;
     char *base = clone_zero(rsc_id);
-    char *alt_rsc_id = crm_strdup(rsc_id);
+    char *alt_rsc_id = NULL;
 
     CRM_ASSERT(parent != NULL);
     CRM_ASSERT(parent->variant == pe_clone || parent->variant == pe_master);
@@ -909,6 +909,12 @@ static resource_t *find_clone(pe_working_set_t *data_set, node_t *node, resource
 	    }	    
 	}
 	
+        if(parent->fns->find_rsc(parent, rsc_id, NULL, pe_find_current)) {
+            alt_rsc_id = crm_strdup(rsc_id);
+        } else {
+            alt_rsc_id = clone_zero(rsc_id);
+        }
+
 	while(rsc == NULL) {
 	    rsc = parent->fns->find_rsc(parent, alt_rsc_id, NULL, pe_find_current);
 	    if(rsc == NULL) {
