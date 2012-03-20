@@ -959,7 +959,7 @@ void clone_rsc_colocation_rh(
 	if(constraint->rsc_lh->variant >= pe_clone) {
 
 	    get_clone_variant_data(clone_data_lh, constraint->rsc_lh);
-	    if(clone_data->clone_node_max != clone_data_lh->clone_node_max) {
+	    if (clone_data_lh->interleave && clone_data->clone_node_max != clone_data_lh->clone_node_max) {
 		crm_config_err("Cannot interleave "XML_CIB_TAG_INCARNATION
 			       " %s and %s because"
 			       " they do not support the same number of"
