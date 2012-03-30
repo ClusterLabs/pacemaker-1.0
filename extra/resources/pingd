@@ -200,6 +200,10 @@ pingd_start() {
 
     rc=$?
     if [ $rc = 0 ]; then
+        while ! pingd_monitor; do
+            ocf_log info "pingd still hasn't started yet. Waiting..."
+            sleep 1
+        done
 	exit $OCF_SUCCESS
     fi
     
@@ -233,10 +237,10 @@ pingd_monitor() {
     if [ ! -z $pid ]; then
 	kill -0 $pid
 	if [ $? = 0 ]; then
-	    exit $OCF_SUCCESS
+	    return $OCF_SUCCESS
 	fi
     fi
-    exit $OCF_NOT_RUNNING
+    return $OCF_NOT_RUNNING
 }
 
 pingd_validate() {
