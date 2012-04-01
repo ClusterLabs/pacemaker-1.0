@@ -327,6 +327,7 @@ abort_transition_graph(
 	
 	if(transition_graph->complete) {
 	    if(transition_timer->period_ms > 0) {
+		crm_timer_stop(transition_timer);
 		crm_timer_start(transition_timer);
 	    } else {
 		register_fsa_input(C_FSA_INTERNAL, I_PE_CALC, NULL);

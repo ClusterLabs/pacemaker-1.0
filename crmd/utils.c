@@ -172,6 +172,19 @@ crm_timer_popped(gpointer data)
 }
 
 gboolean
+is_timer_started(fsa_timer_t *timer)
+{
+	if (timer->period_ms > 0) {
+		if(transition_timer->source_id == 0) {	
+			return FALSE;
+		} else {
+			return TRUE;
+		}
+	}
+	return FALSE;	
+}
+
+gboolean
 crm_timer_start(fsa_timer_t *timer)
 {
 	const char *timer_desc = get_timer_desc(timer);
