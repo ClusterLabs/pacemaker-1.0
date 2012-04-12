@@ -1,0 +1,5 @@
+digraph "g" {
+"all_stopped" [ style=bold color="green" fontcolor="orange"  ]
+"dummy_stop_0 devnode1" -> "all_stopped" [ style = bold]
+"dummy_stop_0 devnode1" [ style=bold color="green" fontcolor="black"  ]
+}

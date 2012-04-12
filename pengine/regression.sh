@@ -346,6 +346,8 @@ do_test bug-lf-2474 "Ensure resource op timeout takes precedence over op_default
 do_test bug-suse-707150 "Prevent vm-01 from starting due to colocation/ordering"
 do_test bug-5007-masterslave_colocation "Verify use of colocation scores other than INFINITY and -INFINITY work on multi-state resources."
 do_test bug-5038 "Prevent restart of anonymous clones when clone-max decreases"
+do_test monitor-onfail-restart "bug-5058 - Monitor failure with on-fail set to restart"
+do_test monitor-onfail-stop    "bug-5058 - Monitor failure wiht on-fail set to stop"
 
 
 echo ""

@@ -1,0 +1,9 @@
+digraph "g" {
+"all_stopped" [ style=bold color="green" fontcolor="orange"  ]
+"dummy_monitor_10000 devnode1" [ style=bold color="green" fontcolor="black"  ]
+"dummy_start_0 devnode1" -> "dummy_monitor_10000 devnode1" [ style = bold]
+"dummy_start_0 devnode1" [ style=bold color="green" fontcolor="black"  ]
+"dummy_stop_0 devnode1" -> "all_stopped" [ style = bold]
+"dummy_stop_0 devnode1" -> "dummy_start_0 devnode1" [ style = bold]
+"dummy_stop_0 devnode1" [ style=bold color="green" fontcolor="black"  ]
+}
