@@ -99,9 +99,9 @@
 		atime->field -= extra;					\
 		while(atime->field < 1) {				\
 			crm_debug_6("Underflowing: %d", atime->field);	\
-			overflow(atime, 1);				\
 			__limit = days_per_month(atime->months, atime->years);	\
 			atime->field += __limit;				\
+			overflow(atime, 1);				\
 		}							\
 		crm_debug_6("Result: %d", atime->field);		\
 	}
