@@ -349,7 +349,8 @@ do_test bug-5038 "Prevent restart of anonymous clones when clone-max decreases"
 do_test monitor-onfail-restart "bug-5058 - Monitor failure with on-fail set to restart"
 do_test monitor-onfail-stop    "bug-5058 - Monitor failure wiht on-fail set to stop"
 do_test bug-5059 "No need to restart p_stateful1:*"
-
+do_test bug-5069-op-enabled  "Test on-fail=ignore with failure when monitor is enabled."
+do_test bug-5069-op-disabled "Test on-fail-ignore with failure when monitor is disabled."
 
 echo ""
 do_test systemhealth1  "System Health ()               #1"
