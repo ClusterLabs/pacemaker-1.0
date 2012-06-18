@@ -540,6 +540,7 @@ write_cib_contents(gpointer p)
 	char *digest = NULL;
 	int exit_rc = LSB_EXIT_OK;
 	xmlNode *cib_status_root = NULL;
+	xmlNode *tmp_cib = NULL;
 	
 	/* we can scribble on "the_cib" here and not affect the parent */
 	const char *epoch = crm_element_value(the_cib, XML_ATTR_GENERATION);
@@ -637,7 +638,8 @@ write_cib_contents(gpointer p)
 		goto cleanup;
 	}
 	crm_debug("Wrote digest %s to disk", digest);
-	CRM_ASSERT(retrieveCib(tmp1, tmp2, FALSE) != NULL);
+	tmp_cib = retrieveCib(tmp1, tmp2, FALSE);
+	CRM_ASSERT(tmp_cib != NULL);
 	sync_directory(cib_root);
 
 	crm_debug("Activating %s", tmp1);
@@ -653,6 +655,7 @@ write_cib_contents(gpointer p)
 	crm_free(digest);
 	crm_free(tmp2);
 	crm_free(tmp1);
+	free_xml(tmp_cib);
 
 	if(p == NULL) {
 		/* fork-and-write mode */
