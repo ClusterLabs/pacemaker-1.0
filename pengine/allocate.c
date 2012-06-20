@@ -229,18 +229,19 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 
 		if(op_match == NULL && is_set(data_set->flags, pe_flag_stop_action_orphans)) {
 			CancelXmlOp(rsc, xml_op, active_node, "orphan", data_set);
-			crm_free(key); key = NULL;
+			crm_free(key);
 			return TRUE;
 
 		} else if(op_match == NULL) {
 			crm_debug("Orphan action detected: %s on %s",
 				  key, active_node->details->uname);
-			crm_free(key); key = NULL;
+			crm_free(key);
 			return TRUE;
 		}
 	}
 
 	action = custom_action(rsc, key, task, active_node, TRUE, FALSE, data_set);
+	/* key is free'd by custom_action() */
 	
 	local_rsc_params = g_hash_table_new_full(
 		g_str_hash, g_str_equal,
@@ -275,13 +276,13 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 		digest_restart_calc = calculate_xml_digest(params_restart, TRUE, FALSE);
 		if(safe_str_neq(digest_restart_calc, digest_restart)) {
 			did_change = TRUE;
+			key = generate_op_key(rsc->id, task, interval);
 			crm_log_xml_info(params_restart, "params:restart");
 	    crm_info("Parameters to %s on %s changed: recorded %s vs. %s (restart:%s) %s",
 				 key, active_node->details->uname,
 				 crm_str(digest_restart), digest_restart_calc,
 				 op_version, crm_element_value(xml_op, XML_ATTR_TRANSITION_MAGIC));
 			
-			key = generate_op_key(rsc->id, task, interval);
 			custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
 			goto cleanup;
 		}
@@ -292,6 +293,7 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 		action_t *op = NULL;
 		did_change = TRUE;
 		crm_log_xml_info(params_all, "params:reload");
+		key = generate_op_key(rsc->id, task, interval);
 		crm_info("Parameters to %s on %s changed: recorded %s vs. %s (reload:%s) %s",
 			 key, active_node->details->uname,
 			 crm_str(digest_all), digest_all_calc, op_version,
@@ -304,7 +306,6 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 	    update_action_flags(op, pe_action_allow_reload_conversion);
 #else
 	    /* Re-sending the recurring op is sufficient - the old one will be cancelled automatically */
-	    key = generate_op_key(rsc->id, task, interval);
 	    op = custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
 	    custom_action_order(rsc, start_key(rsc), NULL,
 				NULL, NULL, op, pe_order_runnable_left, data_set);
@@ -318,7 +319,6 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 	    /* TODO: Set for the resource itself
 	     *  - thus avoiding causing depedant resources to restart
 		     */
-	    key = generate_op_key(rsc->id, task, interval);
 	    op = custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
 
 			op->allow_reload_conversion = TRUE;
@@ -329,7 +329,6 @@ check_action_definition(resource_t *rsc, node_t *active_node, xmlNode *xml_op,
 	    /* Re-send the start/demote/promote op
 	     * Recurring ops will be detected independantly
 	     */
-	    key = generate_op_key(rsc->id, task, interval);
 	    custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
 		}
 	}
