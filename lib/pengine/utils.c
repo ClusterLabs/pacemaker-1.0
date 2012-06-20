@@ -445,8 +445,6 @@ custom_action(resource_t *rsc, char *key, const char *task,
 	}
 	
 	if(possible_matches != NULL) {
-		crm_free(key);
-		
 		if(g_list_length(possible_matches) > 1) {
 			pe_warn("Action %s for %s on %s exists %d times",
 				task, rsc?rsc->id:"<NULL>",
@@ -480,7 +478,7 @@ custom_action(resource_t *rsc, char *key, const char *task,
 		if(on_node) {
 		    action->node = node_copy(on_node);
 		}
-		action->uuid = key;
+		action->uuid = crm_strdup(key);
 		
 		action->actions_before   = NULL;
 		action->actions_after    = NULL;
@@ -622,6 +620,8 @@ custom_action(resource_t *rsc, char *key, const char *task,
 			}
 		}
 	}
+
+	crm_free(key);
 	return action;
 }
 
