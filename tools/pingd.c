@@ -862,7 +862,10 @@ ping_read(ping_node *node, int *lenp)
     
     if(bytes < 0) {
 	crm_perror(LOG_DEBUG, "Read failed");
-	if (saved_errno != EAGAIN && saved_errno != EINTR) {
+	if (saved_errno == EAGAIN || saved_errno == EINTR) {
+	    crm_info("Retrying...");
+	    goto retry;
+	} else {
 	    int rc = 0;
 	    if(node->type == AF_INET6) {
 		rc = process_icmp6_error(node, (struct sockaddr_in6*)&(node->addr));
@@ -898,6 +901,9 @@ ping_read(ping_node *node, int *lenp)
 	} else if(rc > 0) {
 	    crm_free(packet);
 	    return TRUE;
+	} else {
+	    crm_info("Retrying...");
+	    goto retry;
 	}	
 	
     } else {
