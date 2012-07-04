@@ -23,7 +23,7 @@ PACKAGE		?= pacemaker
 # Force 'make dist' to be consistent with 'make export' 
 distprefix		= ClusterLabs-$(PACKAGE)
 distdir			= $(distprefix)-$(TAG)
-TARFILE			= $(distdir).tar.bz2
+TARFILE			= $(distdir).tar.gz
 DIST_ARCHIVES		= $(TARFILE)
 
 LAST_RELEASE		?= $(shell git tag -l | grep Pacemaker | sort -Vr | head -n 1)
