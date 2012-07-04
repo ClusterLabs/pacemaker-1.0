@@ -46,7 +46,7 @@ Release:	%{pcmk_release}%{?dist}
 License:	GPLv2+ and LGPLv2+
 Url:		http://www.clusterlabs.org
 Group:		System Environment/Daemons
-Source0:	%{upstream_prefix}-%{?upstream_version}.tar.bz2
+Source0:	%{upstream_prefix}-%{?upstream_version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 AutoReqProv:	on
 Requires(pre):	cluster-glue
