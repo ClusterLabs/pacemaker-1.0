@@ -466,8 +466,9 @@ AC_SUBST(STONITH_PLUGIN_DIR)
 
 AC_PATH_PROGS(GIT, git false)
 AC_MSG_CHECKING(build version)
-BUILD_VERSION=$Format:%H$
-if test $BUILD_VERSION != ":%H$"; then
+
+BUILD_VERSION=$Format:%h$
+if test $BUILD_VERSION != ":%h$"; then
    AC_MSG_RESULT(archive hash: $BUILD_VERSION)
 
 elif test -x $GIT -a -d .git; then
