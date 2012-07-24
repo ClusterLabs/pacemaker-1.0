@@ -863,7 +863,7 @@ ping_read(ping_node *node, int *lenp)
     if(bytes < 0) {
 	crm_perror(LOG_DEBUG, "Read failed");
 	if (saved_errno == EAGAIN || saved_errno == EINTR) {
-	    crm_info("Retrying...");
+	    crm_debug("Retrying...");
 	    goto retry;
 	} else {
 	    int rc = 0;
@@ -874,7 +874,7 @@ ping_read(ping_node *node, int *lenp)
 	    }
 
 	    if(rc < 0) {
-		crm_info("Retrying...");
+		crm_debug("Retrying...");
 		goto retry;
 	    }
 	}
@@ -895,14 +895,14 @@ ping_read(ping_node *node, int *lenp)
 	}
 
 	if(rc < 0) {
-	    crm_info("Retrying...");
+	    crm_debug("Retrying...");
 	    goto retry;
 	    
 	} else if(rc > 0) {
 	    crm_free(packet);
 	    return TRUE;
 	} else {
-	    crm_info("Retrying...");
+	    crm_debug("Retrying...");
 	    goto retry;
 	}	
 	
