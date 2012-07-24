@@ -862,7 +862,7 @@ ping_read(ping_node *node, int *lenp)
     
     if(bytes < 0) {
 	crm_perror(LOG_DEBUG, "Read failed");
-	if (saved_errno == EAGAIN || saved_errno == EINTR) {
+	if (saved_errno == EAGAIN && saved_errno == EINTR) {
 	    crm_debug("Retrying...");
 	    goto retry;
 	} else {
