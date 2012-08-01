@@ -139,12 +139,18 @@ do_lrm_control(long long action,
 		    crm_info("Disconnected from the LRM");
 		}
 
-		g_hash_table_destroy(resources);
-		resources = NULL;
-		g_hash_table_destroy(deletion_ops);
-		deletion_ops = NULL;
-		g_hash_table_destroy(pending_ops);
-		pending_ops = NULL;
+		if(resources) {
+		    g_hash_table_destroy(resources);
+		    resources = NULL;
+		}
+		if(deletion_ops) {
+		    g_hash_table_destroy(deletion_ops);
+		    deletion_ops = NULL;
+		}
+		if(pending_ops) {
+		    g_hash_table_destroy(pending_ops);
+		    pending_ops = NULL;
+		}
 	}
 
 	if(action & A_LRM_CONNECT) {
