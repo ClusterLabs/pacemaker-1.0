@@ -1868,6 +1868,8 @@ copy_lrm_rsc(const lrm_rsc_t *rsc)
 	return rsc_copy;
 }
 
+int last_resource_update = 0;
+
 void
 cib_rsc_callback(xmlNode *msg, int call_id, int rc,
 		 xmlNode *output, void *user_data)
@@ -1881,6 +1883,11 @@ cib_rsc_callback(xmlNode *msg, int call_id, int rc,
 	default:
 	    crm_warn("Resource update %d failed: (rc=%d) %s",
 		     call_id, rc, cib_error2string(rc));	
+    }
+
+    if(call_id == last_resource_update) {
+        last_resource_update = 0;
+        trigger_fsa(fsa_source);
     }
 }
 
@@ -1960,8 +1967,13 @@ do_update_resource(lrm_op_t* op)
 	 */
 	fsa_cib_update(XML_CIB_TAG_STATUS, update, call_opt, rc);
 			
+	if(rc > 0) {
+	    last_resource_update = rc;
+	}
+
 	/* the return code is a call number, not an error code */
-	crm_debug_2("Sent resource state update message: %d", rc);
+	crm_debug_2("Sent resource state update message: %d for %s=%d on %s",
+		    rc, op->op_type, op->interval, op->rsc_id);
 	fsa_cib_conn->cmds->register_callback(
 	    fsa_cib_conn, rc, 60, FALSE, NULL, "cib_rsc_callback", cib_rsc_callback);
 	

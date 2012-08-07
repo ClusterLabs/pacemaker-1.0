@@ -47,6 +47,7 @@ extern void process_client_disconnect(crmd_client_t *curr_client);
 
 extern gboolean fsa_has_quorum;
 extern int last_peer_update;
+extern int last_resource_update;
 
 extern gboolean crm_timer_stop (fsa_timer_t *timer);
 extern gboolean crm_timer_start(fsa_timer_t *timer);
