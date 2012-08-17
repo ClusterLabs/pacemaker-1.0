@@ -71,6 +71,8 @@ crmd/crmd
 pengine/pengine
 pengine/ptest
 shell/regression/testcases/confbasic-xml.filter
+shell/regression/crmtestout/
+shell/regression/sample.xml
 tools/attrd
 tools/attrd_updater
 tools/cibadmin
