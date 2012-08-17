@@ -1874,6 +1874,15 @@ crm_diff_update(const char *event, xmlNode *msg)
     free_xml(cib_last);
 }
 
+static gint
+sort_nodes_uname(gconstpointer a, gconstpointer b)
+{
+    const node_t *na = a;
+    const node_t *nb = b;
+
+    return strcmp(na->details->uname, nb->details->uname);
+}
+
 gboolean
 mon_refresh_display(gpointer user_data) 
 {
@@ -1894,7 +1903,8 @@ mon_refresh_display(gpointer user_data)
 
     set_working_set_defaults(&data_set);
     data_set.input = cib_copy;
-    cluster_status(&data_set);	
+    cluster_status(&data_set);
+    data_set.nodes = g_list_sort(data_set.nodes, sort_nodes_uname);
 
     if(as_html_file || web_cgi) {
 	if (print_html_status(&data_set, as_html_file, web_cgi) != 0) {
