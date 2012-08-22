@@ -1076,11 +1076,11 @@ print_status(pe_working_set_t *data_set)
 				   
 		   } else if(group_by_node == FALSE) {
 		       if(partially_active || inactive_resources) {
-			   rsc->fns->print(rsc, NULL, print_opts, stdout);
+			   rsc->fns->print(rsc, NULL, print_opts|pe_print_sort, stdout);
 		       }
 				   
 		   } else if(is_active == FALSE && inactive_resources) {
-		       rsc->fns->print(rsc, NULL, print_opts, stdout);
+		       rsc->fns->print(rsc, NULL, print_opts|pe_print_sort, stdout);
 		   }
 	    );
     }
@@ -1270,11 +1270,11 @@ print_html_status(pe_working_set_t *data_set, const char *filename, gboolean web
 				   
 		   } else if(group_by_node == FALSE) {
 		       if(partially_active || inactive_resources) {
-			   rsc->fns->print(rsc, NULL, pe_print_html, stream);
+			   rsc->fns->print(rsc, NULL, pe_print_html|pe_print_sort, stream);
 		       }
 				   
 		   } else if(is_active == FALSE && inactive_resources) {
-		       rsc->fns->print(rsc, NULL, pe_print_html, stream);
+		       rsc->fns->print(rsc, NULL, pe_print_html|pe_print_sort, stream);
 		   }
 	    );
     }
