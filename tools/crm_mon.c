@@ -840,10 +840,11 @@ print_node_attribute(gpointer name, gpointer node_data)
     print_as("\n");
 }
 
+#define STATUS_PATH_MAX 512
 static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 {
     xmlNode *lrm_rsc = NULL;
-    xmlNode *cib_status = get_object_root(XML_CIB_TAG_STATUS, data_set->input);
+    GListPtr gIter = NULL;
 
     if(operations) {
 	print_as("\nOperations:\n");
@@ -851,13 +852,20 @@ static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 	print_as("\nMigration summary:\n");
     }
     
-    xml_child_iter_filter(
-	cib_status, node_state, XML_CIB_TAG_STATE,
-	node_t *node = pe_find_node_id(data_set->nodes, ID(node_state));
+    for (gIter = data_set->nodes; gIter != NULL; gIter = gIter->next) {
+        node_t *node = (node_t *) gIter->data;
+        xmlNode *node_state = NULL;
+        char xpath[STATUS_PATH_MAX];
+
 	if(node == NULL || node->details->online == FALSE){
 	    continue;
 	}
-	
+	snprintf(xpath, STATUS_PATH_MAX, "//node_state[@id='%s']", node->details->id);
+	node_state = get_xpath_object(xpath, data_set->input, LOG_DEBUG);
+	if (node_state == NULL) {
+	    continue;
+	}
+
 	print_as("* Node %s: ", crm_element_value(node_state, XML_ATTR_UNAME));
 	if(!print_nodes_attr) {
 	    get_ping_score(node, data_set);
@@ -883,7 +891,7 @@ static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 		}
 	    }
 	    );
-	);
+    }
 }
 
 static char *
