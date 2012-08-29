@@ -172,6 +172,19 @@ crm_timer_popped(gpointer data)
 }
 
 gboolean
+is_timer_started(fsa_timer_t *timer)
+{
+    if (timer->period_ms > 0) {
+        if(transition_timer->source_id == 0) {
+            return FALSE;
+        } else {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+gboolean
 crm_timer_start(fsa_timer_t *timer)
 {
 	const char *timer_desc = get_timer_desc(timer);
@@ -509,6 +522,9 @@ fsa_action2string(long long action)
 			break;
 		case A_LRM_DISCONNECT:
 			actionAsText = "A_LRM_DISCONNECT";
+			break;
+		case O_LRM_RECONNECT:
+			actionAsText = "O_LRM_RECONNECT";
 			break;
 		case A_CL_JOIN_QUERY:
 			actionAsText = "A_CL_JOIN_QUERY";
@@ -1265,35 +1281,47 @@ attrd_connection_destroy(gpointer user_data)
 void
 update_attrd(const char *host, const char *name, const char *value) 
 {	
-    int retries = 5;
+    int retries = 0;
     gboolean rc = FALSE;
 
-  retry:
-    if(attrd == NULL) {
-	crm_info("Connecting to attrd...");
-	attrd = init_client_ipc_comms_nodispatch(T_ATTRD);
-	if(attrd) {
-	    G_main_add_IPC_Channel(
-		G_PRIORITY_LOW, attrd, FALSE, attrd_dispatch, NULL, attrd_connection_destroy);
-	}
-    }
+    do {
+        rc = FALSE;
+        if (attrd == NULL) {
+            crm_info("Connecting to attrd...");
+            attrd = init_client_ipc_comms_nodispatch(T_ATTRD);
+            if (attrd) {
+                G_main_add_IPC_Channel(G_PRIORITY_LOW, attrd, FALSE, attrd_dispatch, NULL,
+                                       attrd_connection_destroy);
+            }
+        }
     
-    if(attrd != NULL) {
-	rc = attrd_update(attrd, 'U', host, name, value, XML_CIB_TAG_STATUS, NULL, NULL);
-	
-    } else {
-	crm_warn("Could not connect to %s", T_ATTRD);
-    }
+        if(attrd != NULL) {
+            rc = attrd_update(attrd, 'U', host, name, value, XML_CIB_TAG_STATUS, NULL, NULL);
+
+        } else {
+            crm_warn("Could not connect to %s", T_ATTRD);
+        }
+
+        if (rc == FALSE) {
+            attrd = NULL;
+
+            if (retries < 5) {
+                retries++;
+                sleep(retries);
+            }
+        }
+
+    } while(rc == FALSE && retries < 5);
 
     if(rc == FALSE) {
-	crm_err("Could not send %s %s", T_ATTRD, name?"update":"refresh");
-	attrd = NULL;
+        crm_err("Could not send %s %s %s (%d)", T_ATTRD, name ? "update" : "refresh",
+                name?name:"", is_set(fsa_input_register, R_SHUTDOWN));
 	
-	if(retries > 0) {
-	    retries--;
-	    sleep(1);
-	    goto retry;
+        if(is_set(fsa_input_register, R_SHUTDOWN)) {
+            register_fsa_input(C_FSA_INTERNAL, I_FAIL, NULL);
 	}
-    }
     
+    } else if(retries) {
+        crm_debug("Needed %d retries to send %s %s %s", retries, T_ATTRD, name ? "update" : "refresh", name?name:"");
+    }
 }

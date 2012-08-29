@@ -758,11 +758,15 @@ class CibObject(object):
             if s:
                 l.append(s)
         return self.cli_format(l,format)
+    def attr_set_str(self, node):
+        id = node.getAttribute("id")
+        add_id = cib_factory.is_id_refd(node.tagName, id)
+        return "%s %s" % \
+            (cli_display.keyword(self.set_names[node.tagName]), \
+            cli_pairs(nvpairs2list(node, add_id = add_id)))
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
-            return "%s %s" % \
-                (cli_display.keyword(self.set_names[c.tagName]), \
-                cli_pairs(nvpairs2list(c)))
+            return self.attr_set_str(c)
     def cli2node(self,cli,oldnode = None):
         '''
         Convert CLI representation to a DOM node.
@@ -925,7 +929,9 @@ class CibObject(object):
             return self.updated or self.origin == "user"
         if args[0].startswith("type:"):
             return self.obj_type == args[0][5:]
-        return self.obj_id in args
+        return self.obj_id in args or \
+            (self.obj_type == "node" and \
+            self.node.getAttribute("uname") in args)
 
 def mk_cli_list(cli):
     'Sometimes we get a string and sometimes a list.'
@@ -1001,9 +1007,7 @@ class CibPrimitive(CibObject):
         return "%s %s %s" % (s, id, ''.join((s1,s2,ra_type)))
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
-            return "%s %s" % \
-                (cli_display.keyword(self.set_names[c.tagName]), \
-                cli_pairs(nvpairs2list(c)))
+            return self.attr_set_str(c)
         elif c.tagName == "operations":
             return cli_operations(c,format)
     def cli_list2node(self,cli_list,oldnode):
@@ -1143,13 +1147,12 @@ class CibContainer(CibObject):
         if not self.node:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
-        if self.obj_type == "group":
-            l = vars.rsc_meta_attributes
-        elif self.obj_type == "clone":
-            l = vars.clone_meta_attributes
+        l = vars.rsc_meta_attributes
+        if self.obj_type == "clone":
+            l += vars.clone_meta_attributes
         elif self.obj_type == "ms":
-            l = vars.clone_meta_attributes + vars.ms_meta_attributes
-        rc = sanity_check_nvpairs(self.obj_id,self.node,l)
+            l += vars.clone_meta_attributes + vars.ms_meta_attributes
+        rc = sanity_check_meta(self.obj_id,self.node,l)
         return rc
 
 class CibLocation(CibObject):
@@ -1788,6 +1791,7 @@ class CibFactory(Singleton):
         self.cib_attrs = {} # cib version dictionary
         self.cib_objects = [] # a list of cib objects
         self.remove_queue = [] # a list of cib objects to be removed
+        self.id_refs = {} # dict of id-refs
         self.overwrite = False # update cib unconditionally
     def reset(self):
         if not self.doc:
@@ -1799,6 +1803,11 @@ class CibFactory(Singleton):
         "Find an object for id."
         for obj in self.cib_objects:
             if obj.obj_id == obj_id:
+                return obj
+            # special case for Heartbeat nodes which have id
+            # different from uname
+            if obj.obj_type == "node" and \
+                    obj.node.getAttribute("uname") == obj_id:
                 return obj
         return None
     #
@@ -1845,6 +1854,9 @@ class CibFactory(Singleton):
                 return obj
         return None
 
+    def is_id_refd(self, attr_list_type, id):
+        try: return self.id_refs[id] == attr_list_type
+        except: return False
     def resolve_id_ref(self,attr_list_type,id_ref):
         '''
         User is allowed to specify id_ref either as a an object
@@ -1852,7 +1864,8 @@ class CibFactory(Singleton):
         one, i.e. if the former is the case to find the right
         id to reference.
         '''
-        obj= self.find_object(id_ref)
+        obj = self.find_object(id_ref)
+        self.id_refs[id_ref] = attr_list_type
         if obj:
             node_l = obj.node.getElementsByTagName(attr_list_type)
             if node_l:

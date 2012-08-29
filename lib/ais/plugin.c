@@ -42,7 +42,7 @@
 #include "plugin.h"
 #include "utils.h"
 
-#include <glib/ghash.h>
+#include <glib.h>
 
 #include <sys/resource.h>
 #include <sys/utsname.h>
@@ -233,7 +233,7 @@ static struct corosync_exec_handler pcmk_exec_service[] =
  * Exports the interface for the service
  */
 struct corosync_service_engine pcmk_service_handler = {
-    .name			= (unsigned char *)"Pacemaker Cluster Manager "PACKAGE_VERSION,
+    .name			= (char *)"Pacemaker Cluster Manager "PACKAGE_VERSION,
     .id				= PCMK_SERVICE_ID,
     .private_data_size		= 0,
     .flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED, 
@@ -1176,7 +1176,7 @@ struct member_loop_data
 	char *string;
 };
 
-void member_vote_count_fn(gpointer key, gpointer value, gpointer user_data)
+static void member_vote_count_fn(gpointer key, gpointer value, gpointer user_data)
 {
     crm_node_t *node = value;
     if (ais_str_eq(CRM_NODE_MEMBER, node->state)) {
@@ -1600,7 +1600,6 @@ int send_cluster_msg_raw(const AIS_Message *ais_msg)
 void send_cluster_id(void) 
 {
     int rc = 0;
-    int lpc = 0;
     int len = 0;
     time_t now = time(NULL);
     struct iovec iovec;

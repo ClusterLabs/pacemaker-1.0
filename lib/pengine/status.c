@@ -149,10 +149,10 @@ pe_free_nodes(GListPtr nodes)
 		iterator = iterator->next;
 
 		crm_debug_5("deleting node");
-		crm_debug_5("%s is being deleted", details->uname);
 		print_node("delete", node, FALSE);
 		
 		if(details != NULL) {
+			crm_debug_5("%s is being deleted", details->uname);
 			if(details->attrs != NULL) {
 				g_hash_table_destroy(details->attrs);
 			}

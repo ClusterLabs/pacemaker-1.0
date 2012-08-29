@@ -28,7 +28,9 @@
 #######################################################################
 # Initialization:
 
-. ${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs
+: ${OCF_FUNCTIONS=${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs}
+. ${OCF_FUNCTIONS}
+: ${__OCF_ACTION=$1}
 
 #######################################################################
 
@@ -62,6 +64,14 @@ The location where configfs is or should be mounted
 </longdesc>
 <shortdesc lang="en">Location of configfs</shortdesc>
 <content type="string" default="/sys/kernel/config" />
+</parameter>
+
+<parameter name="daemon" unique="1">
+<longdesc lang="en">
+The daemon to start - supports gfs_controld(.pcmk) and dlm_controld(.pcmk)
+</longdesc>
+<shortdesc lang="en">The daemon to start</shortdesc>
+<content type="string" default="dlm_controld.pcmk" />
 </parameter>
 
 </parameters>
@@ -150,7 +160,7 @@ controld_stop() {
 }
 
 controld_monitor() {
-    killall -0 ${OCF_RESKEY_daemon}; rc=$?
+    killall -0 ${OCF_RESKEY_daemon} >/dev/null 2>&1 ; rc=$?
 
     case $rc in
       0) return $OCF_SUCCESS;;
@@ -162,9 +172,9 @@ controld_monitor() {
 controld_validate() {
     check_binary ${OCF_RESKEY_daemon}
 
-    case ${OCF_RESKEY_CRM_meta_gloablly_unique} in
+    case ${OCF_RESKEY_CRM_meta_globally_unique} in
 	yes|Yes|true|True|1) 
-	    ocf_log err "$OCF_RESOURCE_INSTANCE must be configured with the gloablly_unique=false meta attribute"
+	    ocf_log err "$OCF_RESOURCE_INSTANCE must be configured with the globally_unique=false meta attribute"
 	    exit $OCF_ERR_CONFIGURED
 	    ;;
     esac
@@ -176,20 +186,25 @@ controld_validate() {
 
 : ${OCF_RESKEY_sctp=false}
 : ${OCF_RESKEY_configdir=/sys/kernel/config}
-: ${OCF_RESKEY_CRM_meta_gloablly_unique:="false"}
+: ${OCF_RESKEY_CRM_meta_globally_unique:="false"}
+
+case "$HA_quorum_type" in
+    cman|corosync) daemon_ext="";;
+    *) daemon_ext=".pcmk";;
+esac
 
 case "$OCF_RESOURCE_INSTANCE" in
     *[gG][fF][sS]*) 
 	: ${OCF_RESKEY_args=-g 0}
-	: ${OCF_RESKEY_daemon=gfs_controld.pcmk}
+	: ${OCF_RESKEY_daemon=gfs_controld${daemon_ext}}
 	;;
     *[dD][lL][mM]*)
 	: ${OCF_RESKEY_args=-q 0}
-	: ${OCF_RESKEY_daemon=dlm_controld.pcmk}
+	: ${OCF_RESKEY_daemon=dlm_controld${daemon_ext}}
 	;;
     *)
 	: ${OCF_RESKEY_args=-q 0}
-	: ${OCF_RESKEY_daemon=dlm_controld.pcmk}
+	: ${OCF_RESKEY_daemon=dlm_controld${daemon_ext}}
 esac
 
 case $__OCF_ACTION in

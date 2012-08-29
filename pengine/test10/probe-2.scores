@@ -7,7 +7,19 @@ group_color: nfs-kernel-server allocation score on wc01: 0
 group_color: nfs-kernel-server allocation score on wc02: 0
 group_color: intip_nfs allocation score on wc01: 0
 group_color: intip_nfs allocation score on wc02: 0
-clone_color: clone_nfs-common allocation score on wc01: 0
+clone_color: ms_drbd_www allocation score on wc01: 0
+clone_color: ms_drbd_www allocation score on wc02: 0
+clone_color: drbd_www:0 allocation score on wc01: 76
+clone_color: drbd_www:0 allocation score on wc02: 0
+clone_color: drbd_www:1 allocation score on wc01: 0
+clone_color: drbd_www:1 allocation score on wc02: 1
+native_color: drbd_www:0 allocation score on wc01: 76
+native_color: drbd_www:0 allocation score on wc02: -1000000
+native_color: drbd_www:1 allocation score on wc01: -1000000
+native_color: drbd_www:1 allocation score on wc02: -1000000
+drbd_www:0 promotion score on wc01: 175
+drbd_www:1 promotion score on none: 0
+clone_color: clone_nfs-common allocation score on wc01: 76
 clone_color: clone_nfs-common allocation score on wc02: 0
 clone_color: group_nfs-common:0 allocation score on wc01: 0
 clone_color: group_nfs-common:0 allocation score on wc02: 0
@@ -29,18 +41,6 @@ group_color: nfs-common:1 allocation score on wc01: -1000000
 group_color: nfs-common:1 allocation score on wc02: -1000000
 native_color: nfs-common:1 allocation score on wc01: -1000000
 native_color: nfs-common:1 allocation score on wc02: -1000000
-clone_color: ms_drbd_www allocation score on wc01: 0
-clone_color: ms_drbd_www allocation score on wc02: 0
-clone_color: drbd_www:0 allocation score on wc01: 76
-clone_color: drbd_www:0 allocation score on wc02: 0
-clone_color: drbd_www:1 allocation score on wc01: 0
-clone_color: drbd_www:1 allocation score on wc02: 1
-native_color: drbd_www:0 allocation score on wc01: 76
-native_color: drbd_www:0 allocation score on wc02: -1000000
-native_color: drbd_www:1 allocation score on wc01: -1000000
-native_color: drbd_www:1 allocation score on wc02: -1000000
-drbd_www:0 promotion score on wc01: 175
-drbd_www:1 promotion score on none: 0
 native_color: fs_www_data allocation score on wc01: 76
 native_color: fs_www_data allocation score on wc02: -1000000
 native_color: nfs-kernel-server allocation score on wc01: 0

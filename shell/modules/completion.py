@@ -18,7 +18,6 @@
 import os
 import time
 import copy
-import readline
 
 from cibconfig import CibFactory
 from cibstatus import CibStatus
@@ -37,7 +36,7 @@ class CompletionHelp(object):
         self.laststamp = 0
         self.lastitem = ''
     def help(self,f,*args):
-        words = readline.get_line_buffer().split()
+        words = get_buffer().split()
         if not words:
             return
         key = words[-1]
@@ -49,7 +48,7 @@ class CompletionHelp(object):
         help_s = f(key,*args)
         if help_s:
             print "\n%s" % help_s
-            print "%s%s" % (vars.prompt,readline.get_line_buffer()),
+            print "%s%s" % (vars.prompt,get_buffer()),
             self.laststamp = time.time()
             self.lastitem = key
 
@@ -200,12 +199,12 @@ def prim_complete_meta(ra,delimiter = False):
     return prim_meta_attr_list(0,delimiter)
 def prim_complete_op(ra,delimiter):
     words = split_buffer()
-    if (readline.get_line_buffer()[-1] == ' ' and words[-1] == "op") \
-            or (readline.get_line_buffer()[-1] != ' ' and words[-2] == "op"):
+    if (get_buffer()[-1] == ' ' and words[-1] == "op") \
+            or (get_buffer()[-1] != ' ' and words[-2] == "op"):
         dchar = ' '
         l = operations_list()
     else:
-        if readline.get_line_buffer()[-1] == '=':
+        if get_buffer()[-1] == '=':
             dchar = ' '
             l = []
         else:
@@ -215,7 +214,7 @@ def prim_complete_op(ra,delimiter):
         return dchar
     return l
 def prim_complete_params(ra,delimiter):
-    if readline.get_line_buffer()[-1] == '=':
+    if get_buffer()[-1] == '=':
         dchar = ' '
         l = []
     else:
@@ -247,7 +246,7 @@ def primitive_complete_complex(idx,delimiter = False):
         "op": (prim_complete_op, op_attr_info),
     }
     # manage the resource type
-    words = readline.get_line_buffer().split()
+    words = get_buffer().split()
     type_word = get_primitive_type(words)
     toks = type_word.split(':')
     if toks[0] != "ocf":
@@ -265,9 +264,9 @@ def primitive_complete_complex(idx,delimiter = False):
             return ' '
         return keywords
     lastkeyw = get_lastkeyw(words,keywords)
-    if '=' in words[-1] and readline.get_line_buffer()[-1] != ' ':
+    if '=' in words[-1] and get_buffer()[-1] != ' ':
         if not delimiter and lastkeyw and \
-                readline.get_line_buffer()[-1] == '=' and len(words[-1]) > 1:
+                get_buffer()[-1] == '=' and len(words[-1]) > 1:
             compl_help.help(completers_set[lastkeyw][1],ra)
         if delimiter:
             return ' '
@@ -281,10 +280,10 @@ def property_complete(idx,delimiter = False):
     previous tokens.
     '''
     ra = get_properties_meta()
-    words = readline.get_line_buffer().split()
-    if '=' in words[-1] and readline.get_line_buffer()[-1] != ' ':
+    words = get_buffer().split()
+    if '=' in words[-1] and get_buffer()[-1] != ' ':
         if not delimiter and \
-                readline.get_line_buffer()[-1] == '=' and len(words[-1]) > 1:
+                get_buffer()[-1] == '=' and len(words[-1]) > 1:
             compl_help.help(prim_params_info,ra)
         if delimiter:
             return ' '
@@ -319,12 +318,16 @@ def lookup_words(ctab,words):
     elif words[0] in ctab.keys():
         return lookup_words(ctab[words[0]],words[1:])
     return []
+def get_buffer():
+    import readline
+    return readline.get_line_buffer()
 def split_buffer():
-    p = readline.get_line_buffer()
+    p = get_buffer()
     p = p.replace(':',' ').replace('=',' ')
     return p.split()
 
 def completer(txt,state):
+    import readline
     levels = Levels.getInstance()
     words = split_buffer()
     if readline.get_begidx() == readline.get_endidx():
@@ -333,6 +336,7 @@ def completer(txt,state):
     matched.append(None)
     return matched[state]
 def setup_readline():
+    import readline
     readline.set_history_length(100)
     readline.parse_and_bind("tab: complete")
     readline.set_completer(completer)
@@ -464,10 +468,12 @@ completer_lists = {
         "_objects" : None,
     },
 }
-def get_completer_list(level,cmd):
+def get_completer_list(lvl_obj,cmd):
     'Return a list of completer functions.'
-    try: return completer_lists[level][cmd]
-    except: return None
+    try: return completer_lists[lvl_obj.lvl_name][cmd]
+    except:
+        try: return completer_lists[lvl_obj.lvl_name][lvl_obj.rev_alias_table[cmd]]
+        except: return None
 
 compl_help = CompletionHelp()
 user_prefs = UserPrefs.getInstance()

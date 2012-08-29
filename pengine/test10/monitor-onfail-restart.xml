@@ -1,0 +1,65 @@
+<cib validate-with="pacemaker-1.0" crm_feature_set="3.0.1" have-quorum="1" admin_epoch="0" epoch="282" num_updates="6" cib-last-written="Fri Aug  3 11:52:00 2012" dc-uuid="9240e90e-ea73-4008-b439-21bdcedb564b">
+  <configuration>
+    <crm_config>
+      <cluster_property_set id="cib-bootstrap-options">
+        <nvpair id="cib-bootstrap-options-dc-version" name="dc-version" value="1.0.12-unknown"/>
+        <nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="Heartbeat"/>
+        <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="false"/>
+        <nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="ignore"/>
+        <nvpair id="cib-bootstrap-options-last-lrm-refresh" name="last-lrm-refresh" value="1343962278"/>
+      </cluster_property_set>
+    </crm_config>
+    <nodes>
+      <node id="9240e90e-ea73-4008-b439-21bdcedb564b" type="normal" uname="devnode1"/>
+      <node id="23f877aa-1452-49bc-820d-57b65b6564e4" type="normal" uname="devnode2"/>
+    </nodes>
+    <resources>
+      <primitive class="ocf" id="dummy" provider="heartbeat" type="Dummy">
+        <operations>
+          <op id="dummy-monitor-10s" interval="10s" name="monitor" on-fail="restart" timeout="60s"/>
+        </operations>
+      </primitive>
+    </resources>
+    <constraints/>
+    <rsc_defaults>
+      <meta_attributes id="rsc-options">
+        <nvpair id="rsc-options-resource-stickiness" name="resource-stickiness" value="INFINITY"/>
+        <nvpair id="rsc-options-migration-threshold" name="migration-threshold" value="1"/>
+      </meta_attributes>
+    </rsc_defaults>
+  </configuration>
+  <status>
+    <node_state id="9240e90e-ea73-4008-b439-21bdcedb564b" uname="devnode1" ha="active" in_ccm="true" crmd="online" join="member" expected="member" crm-debug-origin="do_update_resource" shutdown="0">
+      <transient_attributes id="9240e90e-ea73-4008-b439-21bdcedb564b">
+        <instance_attributes id="status-9240e90e-ea73-4008-b439-21bdcedb564b">
+          <nvpair id="status-9240e90e-ea73-4008-b439-21bdcedb564b-probe_complete" name="probe_complete" value="true"/>
+          <nvpair id="status-9240e90e-ea73-4008-b439-21bdcedb564b-last-failure-dummy" name="last-failure-dummy" value="1343961684"/>
+        </instance_attributes>
+      </transient_attributes>
+      <lrm id="9240e90e-ea73-4008-b439-21bdcedb564b">
+        <lrm_resources>
+          <lrm_resource id="dummy" type="Dummy" class="ocf" provider="heartbeat">
+            <lrm_rsc_op id="dummy_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="4:9:7:70cbc545-c4db-42a6-a99b-b51ebc6813eb" transition-magic="0:7;4:9:7:70cbc545-c4db-42a6-a99b-b51ebc6813eb" call-id="7" rc-code="7" op-status="0" interval="0" last-run="1343962277" last-rc-change="1343962277" exec-time="10" queue-time="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
+            <lrm_rsc_op id="dummy_start_0" operation="start" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="7:9:0:70cbc545-c4db-42a6-a99b-b51ebc6813eb" transition-magic="0:0;7:9:0:70cbc545-c4db-42a6-a99b-b51ebc6813eb" call-id="8" rc-code="0" op-status="0" interval="0" last-run="1343962279" last-rc-change="1343962279" exec-time="10" queue-time="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" op-force-restart=" state " op-restart-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
+            <lrm_rsc_op id="dummy_monitor_10000" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="8:9:0:70cbc545-c4db-42a6-a99b-b51ebc6813eb" transition-magic="0:7;8:9:0:70cbc545-c4db-42a6-a99b-b51ebc6813eb" call-id="9" rc-code="7" op-status="0" interval="10000" last-rc-change="1343962319" exec-time="10" queue-time="0" op-digest="873ed4f07792aa8ff18f3254244675ea"/>
+          </lrm_resource>
+        </lrm_resources>
+      </lrm>
+    </node_state>
+    <node_state id="23f877aa-1452-49bc-820d-57b65b6564e4" uname="devnode2" ha="active" join="member" crm-debug-origin="do_update_resource" crmd="online" shutdown="0" in_ccm="true" expected="member">
+      <lrm id="23f877aa-1452-49bc-820d-57b65b6564e4">
+        <lrm_resources>
+          <lrm_resource id="dummy" type="Dummy" class="ocf" provider="heartbeat">
+            <lrm_rsc_op id="dummy_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="6:9:7:70cbc545-c4db-42a6-a99b-b51ebc6813eb" transition-magic="0:7;6:9:7:70cbc545-c4db-42a6-a99b-b51ebc6813eb" call-id="6" rc-code="7" op-status="0" interval="0" last-run="1343962285" last-rc-change="1343962285" exec-time="20" queue-time="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
+          </lrm_resource>
+        </lrm_resources>
+      </lrm>
+      <transient_attributes id="23f877aa-1452-49bc-820d-57b65b6564e4">
+        <instance_attributes id="status-23f877aa-1452-49bc-820d-57b65b6564e4">
+          <nvpair id="status-23f877aa-1452-49bc-820d-57b65b6564e4-probe_complete" name="probe_complete" value="true"/>
+          <nvpair id="status-23f877aa-1452-49bc-820d-57b65b6564e4-last-failure-dummy" name="last-failure-dummy" value="1343962002"/>
+        </instance_attributes>
+      </transient_attributes>
+    </node_state>
+  </status>
+</cib>

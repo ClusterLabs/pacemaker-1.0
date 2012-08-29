@@ -96,7 +96,6 @@ gboolean spawn_child(crm_child_t *child)
     int lpc = 0;
     uid_t uid = 0;
     struct rlimit oflimits;
-    struct passwd *pwentry = NULL;
     gboolean use_valgrind = FALSE;
     const char *devnull = "/dev/null";
     const char *env_valgrind = getenv("HA_VALGRIND_ENABLED");
@@ -549,7 +548,7 @@ hdb_handle_t config_find_init(struct corosync_api_v1 *config, char *name)
     hdb_handle_t local_handle = 0;
 #ifdef AIS_COROSYNC
     config->object_find_create(OBJECT_PARENT_HANDLE, name, strlen(name), &local_handle);
-    ais_info("Local handle: %lld for %s", local_handle, name);
+    ais_info("Local handle: %lld for %s", (long long)local_handle, name);
 #endif
     
 #ifdef AIS_WHITETANK 

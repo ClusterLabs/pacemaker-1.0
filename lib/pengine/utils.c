@@ -33,6 +33,7 @@ void print_str_str(gpointer key, gpointer value, gpointer user_data);
 gboolean ghash_free_str_str(gpointer key, gpointer value, gpointer user_data);
 void unpack_operation(
 	action_t *action, xmlNode *xml_obj, pe_working_set_t* data_set);
+static xmlNode *find_rsc_op_entry_helper(resource_t * rsc, const char *key, gboolean include_disabled);
 
 void
 pe_free_shallow(GListPtr alist)
@@ -445,8 +446,6 @@ custom_action(resource_t *rsc, char *key, const char *task,
 	}
 	
 	if(possible_matches != NULL) {
-		crm_free(key);
-		
 		if(g_list_length(possible_matches) > 1) {
 			pe_warn("Action %s for %s on %s exists %d times",
 				task, rsc?rsc->id:"<NULL>",
@@ -480,7 +479,7 @@ custom_action(resource_t *rsc, char *key, const char *task,
 		if(on_node) {
 		    action->node = node_copy(on_node);
 		}
-		action->uuid = key;
+		action->uuid = crm_strdup(key);
 		
 		action->actions_before   = NULL;
 		action->actions_after    = NULL;
@@ -505,7 +504,7 @@ custom_action(resource_t *rsc, char *key, const char *task,
 		}		
 		
 		if(rsc != NULL) {
-			action->op_entry = find_rsc_op_entry(rsc, key);
+			action->op_entry = find_rsc_op_entry_helper(rsc, key, TRUE);
 			
 			unpack_operation(
 				action, action->op_entry, data_set);
@@ -622,6 +621,8 @@ custom_action(resource_t *rsc, char *key, const char *task,
 			}
 		}
 	}
+
+	crm_free(key);
 	return action;
 }
 
@@ -871,8 +872,8 @@ unpack_operation(
 	g_hash_table_replace(action->meta, crm_strdup(field), value_ms);
 }
 
-xmlNode *
-find_rsc_op_entry(resource_t *rsc, const char *key) 
+static xmlNode *
+find_rsc_op_entry_helper(resource_t * rsc, const char *key, gboolean include_disabled)
 {
 	int number = 0;
 	gboolean do_retry = TRUE;
@@ -890,7 +891,7 @@ find_rsc_op_entry(resource_t *rsc, const char *key)
 		name = crm_element_value(operation, "name");
 		interval = crm_element_value(operation, XML_LRM_ATTR_INTERVAL);
 		value = crm_element_value(operation, "enabled");
-		if(value && crm_is_true(value) == FALSE) {
+		if (!include_disabled && value && crm_is_true(value) == FALSE) {
 			continue;
 		}
 
@@ -930,6 +931,12 @@ find_rsc_op_entry(resource_t *rsc, const char *key)
 	}
 	
 	return NULL;
+}
+
+xmlNode *
+find_rsc_op_entry(resource_t * rsc, const char *key)
+{
+    return find_rsc_op_entry_helper( rsc, key, FALSE);
 }
 
 void

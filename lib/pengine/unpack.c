@@ -775,6 +775,7 @@ increment_clone(char *last_rsc_id)
 			default:
 				crm_err("Unexpected char: %c (%d)",
 					last_rsc_id[lpc], lpc);
+				return NULL;
 				break;
 		}
 	}
@@ -846,7 +847,7 @@ static resource_t *find_clone(pe_working_set_t *data_set, node_t *node, resource
     int len = 0;
     resource_t *rsc = NULL;
     char *base = clone_zero(rsc_id);
-    char *alt_rsc_id = crm_strdup(rsc_id);
+    char *alt_rsc_id = NULL;
 
     CRM_ASSERT(parent != NULL);
     CRM_ASSERT(parent->variant == pe_clone || parent->variant == pe_master);
@@ -908,6 +909,12 @@ static resource_t *find_clone(pe_working_set_t *data_set, node_t *node, resource
 	    }	    
 	}
 	
+        if(parent->fns->find_rsc(parent, rsc_id, NULL, pe_find_current)) {
+            alt_rsc_id = crm_strdup(rsc_id);
+        } else {
+            alt_rsc_id = clone_zero(rsc_id);
+        }
+
 	while(rsc == NULL) {
 	    rsc = parent->fns->find_rsc(parent, alt_rsc_id, NULL, pe_find_current);
 	    if(rsc == NULL) {
@@ -1177,6 +1184,8 @@ process_recurring(node_t *node, resource_t *rsc,
 void
 calculate_active_ops(GListPtr sorted_op_list, int *start_index, int *stop_index) 
 {
+	int implied_monitor_start = -1;
+	int implied_master_start = -1;
 	const char *task = NULL;
 	const char *status = NULL;
 
@@ -1196,14 +1205,25 @@ calculate_active_ops(GListPtr sorted_op_list, int *start_index, int *stop_index)
 		} else if(safe_str_eq(task, CRMD_ACTION_START)) {
 			*start_index = lpc;
 			
-		} else if(*start_index <= *stop_index
+		} else if((implied_monitor_start <= *stop_index)
 			  && safe_str_eq(task, CRMD_ACTION_STATUS)) {
 			const char *rc = crm_element_value(rsc_op, XML_LRM_ATTR_RC);
 			if(safe_str_eq(rc, "0") || safe_str_eq(rc, "8")) {
-				*start_index = lpc;
+				implied_monitor_start = lpc;
 			}
+		} else if (safe_str_eq(task, CRMD_ACTION_PROMOTE)
+			   || safe_str_eq(task, CRMD_ACTION_DEMOTE)) {
+			implied_master_start = lpc;
 		}
 		);
+
+	if (*start_index == -1) {
+		if (implied_master_start != -1) {
+			*start_index = implied_master_start;
+		} else if (implied_monitor_start != -1) {
+			*start_index = implied_monitor_start;
+		}
+	}
 }
 
 	
@@ -1516,10 +1536,12 @@ unpack_rsc_op(resource_t *rsc, node_t *node, xmlNode *xml_op,
 		}
 		
 		do_crm_log(actual_rc_i==EXECRA_NOT_INSTALLED?LOG_NOTICE:LOG_ERR,
-			   "Hard error - %s failed with rc=%d: Preventing %s from re-starting %s %s",
-			id, actual_rc_i, failed->id,
-			effective_node?"on":"anywhere",
-			effective_node?effective_node->details->uname:"in the cluster");
+                       "Preventing %s from re-starting %s %s: operation %s failed '%s' (rc=%d)",
+                       failed->id,
+                       effective_node ? "on" : "anywhere in the cluster",
+                       effective_node ? effective_node->details->uname : "",
+                       task,
+                       execra_code2string(actual_rc_i), actual_rc_i);
 
 		resource_location(failed, effective_node, -INFINITY, "hard-error", data_set);
 		if(is_probe) {

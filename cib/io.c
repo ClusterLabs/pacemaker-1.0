@@ -540,6 +540,7 @@ write_cib_contents(gpointer p)
 	char *digest = NULL;
 	int exit_rc = LSB_EXIT_OK;
 	xmlNode *cib_status_root = NULL;
+	xmlNode *tmp_cib = NULL;
 	
 	/* we can scribble on "the_cib" here and not affect the parent */
 	const char *epoch = crm_element_value(the_cib, XML_ATTR_GENERATION);
@@ -551,6 +552,9 @@ write_cib_contents(gpointer p)
 	char *primary_file = crm_concat(cib_root, "cib.xml", '/');
 	char *digest_file = crm_concat(primary_file, "sig", '.');
 	
+	char *backup_file = NULL;
+	char *backup_digest = NULL;
+
 	/* Always write out with num_updates=0 */
 	crm_xml_add(the_cib, XML_ATTR_NUMUPDATES, "0");
 	
@@ -560,8 +564,7 @@ write_cib_contents(gpointer p)
 
 	need_archive = (stat(primary_file, &buf) == 0);
 	if (need_archive) {
-	    char *backup_file = NULL;
-	    char *backup_digest = NULL;
+	    int rc = 0;
 	    int seq = get_last_sequence(cib_root, CIB_SERIES);
 
 	    /* check the admin didnt modify it underneath us */
@@ -576,15 +579,26 @@ write_cib_contents(gpointer p)
 	    
 	    unlink(backup_file); 
 	    unlink(backup_digest);
-	    link(primary_file, backup_file);
-	    link(digest_file, backup_digest);
+	    rc = link(primary_file, backup_file);
+	    if(rc < 0) {
+		exit_rc = 4;
+		crm_perror(LOG_ERR, "Cannot link %s to %s", primary_file, backup_file);
+		goto cleanup;
+	    }
+
+	    rc = stat(digest_file, &buf);
+	    if (rc == 0) {
+		rc = link(digest_file, backup_digest);
+		if(rc < 0) {
+		    exit_rc = 5;
+		    crm_perror(LOG_ERR, "Cannot link %s to %s", digest_file, backup_digest);
+		    goto cleanup;
+		}
+	    }
 	    write_last_sequence(cib_root, CIB_SERIES, seq+1, cib_wrap);
 	    sync_directory(cib_root);
 
 	    crm_info("Archived previous version as %s", backup_file);	
-	    
-	    crm_free(backup_digest);
-	    crm_free(backup_file);
 	}
 
 	/* Given that we discard the status section on startup
@@ -624,7 +638,8 @@ write_cib_contents(gpointer p)
 		goto cleanup;
 	}
 	crm_debug("Wrote digest %s to disk", digest);
-	CRM_ASSERT(retrieveCib(tmp1, tmp2, FALSE) != NULL);
+	tmp_cib = retrieveCib(tmp1, tmp2, FALSE);
+	CRM_ASSERT(tmp_cib != NULL);
 	sync_directory(cib_root);
 
 	crm_debug("Activating %s", tmp1);
@@ -633,11 +648,14 @@ write_cib_contents(gpointer p)
 	sync_directory(cib_root);
 
   cleanup:
+	crm_free(backup_digest);
 	crm_free(primary_file);
+	crm_free(backup_file);
 	crm_free(digest_file);
 	crm_free(digest);
 	crm_free(tmp2);
 	crm_free(tmp1);
+	free_xml(tmp_cib);
 
 	if(p == NULL) {
 		/* fork-and-write mode */

@@ -32,7 +32,7 @@
 #include <crm_internal.h>
 #include <crm/crm.h>
 #include <crm/common/ipc.h>
-#include <glib/ghash.h>
+#include <glib.h>
 
 #include <crm/ais.h>
 
