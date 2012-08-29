@@ -122,17 +122,35 @@ do_lrm_control(long long action,
 
 	if(action & A_LRM_DISCONNECT) {
 		if(verify_stopped(cur_state, LOG_INFO) == FALSE) {
-		    crmd_fsa_stall(NULL);
-		    return;
+		    if(action == A_LRM_DISCONNECT) {
+			crmd_fsa_stall(NULL);
+			return;
+		    }
 		}
 		
 		if(is_set(fsa_input_register, R_LRM_CONNECTED)) {
 		    clear_bit_inplace(fsa_input_register, R_LRM_CONNECTED);
+
+		    if (lrm_source) {
+			G_main_del_IPC_Channel(lrm_source);
+			lrm_source = NULL;
+		    }
 		    fsa_lrm_conn->lrm_ops->signoff(fsa_lrm_conn);
 		    crm_info("Disconnected from the LRM");
 		}
 
-		/* TODO: Clean up the hashtable */
+		if(resources) {
+		    g_hash_table_destroy(resources);
+		    resources = NULL;
+		}
+		if(deletion_ops) {
+		    g_hash_table_destroy(deletion_ops);
+		    deletion_ops = NULL;
+		}
+		if(pending_ops) {
+		    g_hash_table_destroy(pending_ops);
+		    pending_ops = NULL;
+		}
 	}
 
 	if(action & A_LRM_CONNECT) {
@@ -503,8 +521,8 @@ append_restart_list(lrm_rsc_t *rsc, lrm_op_t *op, xmlNode *update, const char *v
 	} else if(rsc == NULL) {
 		return;
 
-	} else if(crm_str_eq(CRMD_ACTION_START, op->op_type, TRUE) == FALSE) {
-		/* only starts are potentially reloadable */
+	} else if (crm_str_eq(CRMD_ACTION_STOP, op->op_type, TRUE)) {
+		/* Stopped resources don't need to be reloaded */
 		return;
 		
 	} else if(compare_version("1.0.8", version) > 0) {
@@ -740,6 +758,10 @@ is_rsc_active(const char *rsc_id)
 			active = FALSE;
 			
 		} else if(op->rc == EXECRA_NOT_RUNNING) {
+			active = FALSE;
+
+		} else if (op->interval == 0 && op->rc == EXECRA_NOT_CONFIGURED) {
+			/* Badly configured resources can't be reliably stopped */
 			active = FALSE;
 
 		} else {
@@ -1428,9 +1450,9 @@ do_lrm_invoke(long long action,
 }
 
 
-static void copy_notify_keys(gpointer key, gpointer value, gpointer user_data)
+static void copy_meta_keys(gpointer key, gpointer value, gpointer user_data)
 {
-    if(strstr(key, CRM_META"_notify_") != NULL) {
+    if(strstr(key, CRM_META"_") != NULL) {
 	g_hash_table_insert(user_data, strdup((const char *)key), strdup((const char *)value));
     }
 }
@@ -1510,7 +1532,7 @@ construct_op(xmlNode *rsc_op, const char *rsc_id, const char *operation)
 				    crm_strdup(version));
 	    }
 
-	    g_hash_table_foreach(params, copy_notify_keys, op->params);	
+	    g_hash_table_foreach(params, copy_meta_keys, op->params);
 	    g_hash_table_destroy(params); params = NULL;
 	}
 	
@@ -1755,7 +1777,9 @@ free_recurring_op(gpointer value)
 void
 free_lrm_op(lrm_op_t *op) 
 {
-	g_hash_table_destroy(op->params);
+	if(op->params) {
+		g_hash_table_destroy(op->params);
+	}
 	crm_free(op->user_data);
 	crm_free(op->output);
 	crm_free(op->rsc_id);
@@ -1844,6 +1868,8 @@ copy_lrm_rsc(const lrm_rsc_t *rsc)
 	return rsc_copy;
 }
 
+int last_resource_update = 0;
+
 void
 cib_rsc_callback(xmlNode *msg, int call_id, int rc,
 		 xmlNode *output, void *user_data)
@@ -1857,6 +1883,11 @@ cib_rsc_callback(xmlNode *msg, int call_id, int rc,
 	default:
 	    crm_warn("Resource update %d failed: (rc=%d) %s",
 		     call_id, rc, cib_error2string(rc));	
+    }
+
+    if(call_id == last_resource_update) {
+        last_resource_update = 0;
+        trigger_fsa(fsa_source);
     }
 }
 
@@ -1936,8 +1967,13 @@ do_update_resource(lrm_op_t* op)
 	 */
 	fsa_cib_update(XML_CIB_TAG_STATUS, update, call_opt, rc);
 			
+	if(rc > 0) {
+	    last_resource_update = rc;
+	}
+
 	/* the return code is a call number, not an error code */
-	crm_debug_2("Sent resource state update message: %d", rc);
+	crm_debug_2("Sent resource state update message: %d for %s=%d on %s",
+		    rc, op->op_type, op->interval, op->rsc_id);
 	fsa_cib_conn->cmds->register_callback(
 	    fsa_cib_conn, rc, 60, FALSE, NULL, "cib_rsc_callback", cib_rsc_callback);
 	

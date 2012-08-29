@@ -1035,10 +1035,6 @@ void native_rsc_location(resource_t *rsc, rsc_to_node_t *constraint)
 {
 	GListPtr or_list;
 
-	crm_debug_2("Applying %s (%s) to %s", constraint->id,
-		    role2text(constraint->role_filter), rsc->id);
-
-	/* take "lifetime" into account */
 	if(constraint == NULL) {
 		pe_err("Constraint is NULL");
 		return;
@@ -1046,9 +1042,14 @@ void native_rsc_location(resource_t *rsc, rsc_to_node_t *constraint)
 	} else if(rsc == NULL) {
 		pe_err("LHS of rsc_to_node (%s) is NULL", constraint->id);
 		return;
+	}
 
-	} else if(constraint->role_filter > 0
-		  && constraint->role_filter != rsc->next_role) {
+	crm_debug_2("Applying %s (%s) to %s", constraint->id,
+		    role2text(constraint->role_filter), rsc->id);
+
+	/* take "lifetime" into account */
+	if(constraint->role_filter > 0
+	   && constraint->role_filter != rsc->next_role) {
 		crm_debug("Constraint (%s) is not active (role : %s)",
 			  constraint->id, role2text(constraint->role_filter));
 		return;
@@ -1968,278 +1969,278 @@ at_stack_bottom(resource_t *rsc)
     return TRUE;
 }
 
-void
-complex_migrate_reload(resource_t *rsc, pe_working_set_t *data_set)
+static action_t *
+get_first_named_action(resource_t *rsc, const char *action, gboolean only_valid)
 {
-	char *key = NULL;
-	int level = LOG_DEBUG;
-	GListPtr action_list = NULL;
-	
-	action_t *stop = NULL;
-	action_t *start = NULL;
-	action_t *other = NULL;
-	action_t *action = NULL;
-	const char *value = NULL;
+	action_t *a = NULL;
+	char *key = generate_op_key(rsc->id, action, 0);
+	GListPtr action_list = find_actions(rsc->actions, key, NULL);
 
-	if(rsc->children) {
-	    slist_iter(
-		child_rsc, resource_t, rsc->children, lpc,
-		
-		child_rsc->cmds->migrate_reload(child_rsc, data_set);
-		);
-	    other = NULL;
-	    return;
-	} else if(rsc->variant > pe_native) {
-	    return;
+
+	crm_free(key);
+	if (action_list == NULL || action_list->data == NULL) {
+	    crm_debug_2("%s: no %s action", rsc->id, action);
+	    return NULL;
 	}
 
-	do_crm_log_unlikely(level+1, "Processing %s", rsc->id);
+	a = action_list->data;
+	g_list_free(action_list);
 	
-	if(is_not_set(rsc->flags, pe_rsc_managed)
-	   || is_set(rsc->flags, pe_rsc_failed)
-	   || is_set(rsc->flags, pe_rsc_start_pending)
-	   || rsc->next_role < RSC_ROLE_STARTED
-	   || g_list_length(rsc->running_on) != 1) {
-	    do_crm_log_unlikely(
-		level+1, "%s: general resource state: flags=0x%.16llx",
-		rsc->id, rsc->flags);
-	    return;
-	}
+	if(only_valid && a->pseudo) {
+            crm_debug_2("%s: pseudo", key);
+	    return NULL;
 
-	value = g_hash_table_lookup(rsc->meta, XML_OP_ATTR_ALLOW_MIGRATE);
-	if(crm_is_true(value)) {
-	    set_bit(rsc->flags, pe_rsc_can_migrate);	
+	} else if(only_valid && a->runnable == FALSE) {
+	    crm_debug_2("%s: runnable", key);
+	    return NULL;
 	}	
 
-	if(rsc->next_role > RSC_ROLE_SLAVE) {
-	    clear_bit(rsc->flags, pe_rsc_can_migrate);	
-	    do_crm_log_unlikely(
-		level+1, "%s: resource role: role=%s", rsc->id, role2text(rsc->next_role));
-	}
-	
-	key = start_key(rsc);
-	action_list = find_actions(rsc->actions, key, NULL);
-	crm_free(key);
-	
-	if(action_list == NULL) {
-		do_crm_log_unlikely(level, "%s: no start action", rsc->id);
-		return;
-	}
-	
-	start = action_list->data;
-	g_list_free(action_list);
+	return a;
+}
 
-	if(is_not_set(rsc->flags, pe_rsc_can_migrate)
-	   && start->allow_reload_conversion == FALSE) {
-		do_crm_log_unlikely(level+1, "%s: no need to continue", rsc->id);
-		return;
-	}
+static void
+MigrateRsc(resource_t * rsc, action_t *stop, action_t *start, pe_working_set_t * data_set)
+{
+    action_t *to = NULL;
+    action_t *from = NULL;
+    action_t *other = NULL;
 	
-	key = stop_key(rsc);
-	action_list = find_actions(rsc->actions, key, NULL);
-	crm_free(key);
+    const char *value = g_hash_table_lookup(rsc->meta, XML_OP_ATTR_ALLOW_MIGRATE);
 	
-	if(action_list == NULL) {
-		do_crm_log_unlikely(level, "%s: no stop action", rsc->id);
-		return;
-	}
-	
-	stop = action_list->data;
-	g_list_free(action_list);
-	
-	action = start;
-	if(action->pseudo
-	   || action->optional
-	   || action->node == NULL
-	   || action->runnable == FALSE) {
-		do_crm_log_unlikely(level, "%s: %s", rsc->id, action->task);
-		return;
-	}
-	
-	action = stop;
-	if(action->pseudo
-	   || action->optional
-	   || action->node == NULL
-	   || action->runnable == FALSE) {
-		do_crm_log_unlikely(level, "%s: %s", rsc->id, action->task);
-		return;
-	}
-	
-	if(is_set(rsc->flags, pe_rsc_can_migrate)) {
-	    if(start->node == NULL
-	       || stop->node == NULL
-	       || stop->node->details == start->node->details) {
-		clear_bit(rsc->flags, pe_rsc_can_migrate);
+    if (crm_is_true(value) == FALSE) {
+	return;
+    }
 
-	    } else if(at_stack_bottom(rsc) == FALSE) {
-		clear_bit(rsc->flags, pe_rsc_can_migrate);
-	    }
-	}
+    if (rsc->next_role > RSC_ROLE_SLAVE) {
+	crm_debug_2("%s: resource role: role=%s", rsc->id, role2text(rsc->next_role));
+	return;
+    }
+	
+    if(start == NULL || stop == NULL) {
+	crm_debug_2("%s: not exists %p -> %p", rsc->id, stop, start);
+	return;
+    } else if (start->node == NULL || stop->node == NULL) {
+	crm_debug_2("%s: no node %p -> %p", rsc->id, stop->node, start->node);
+	return;
+    } else if(stop->optional) {
+	crm_debug_2("%s: stop action", rsc->id);
+	return;
 
-	if(is_set(rsc->flags, pe_rsc_can_migrate)) {
-	    action_t *to = NULL;
-	    action_t *from = NULL;
-	    crm_info("Migrating %s from %s to %s", rsc->id,
-			 stop->node->details->uname,
-			 start->node->details->uname);
+    } else if(start->optional) {
+	crm_debug_2("%s: start action", rsc->id);
+	return;
+
+    } else if (stop->node->details == start->node->details) {
+	crm_debug_2("%s: not moving %p -> %p", rsc->id, stop->node, start->node);
+	return;
+
+    } else if (at_stack_bottom(rsc) == FALSE) {
+	crm_debug_2("%s: not at stack bottom", rsc->id);
+	return;
+    }
+
+    crm_info("Migrating %s from %s to %s", rsc->id,
+	     stop->node->details->uname,
+	     start->node->details->uname);
 		
-		crm_free(stop->uuid);
-		crm_free(stop->task);
-		stop->task = crm_strdup(RSC_MIGRATE);
-		stop->uuid = generate_op_key(rsc->id, stop->task, 0);
-		add_hash_param(stop->meta, "migrate_source",
-			       stop->node->details->uname);
-		add_hash_param(stop->meta, "migrate_target",
-			       start->node->details->uname);
+    crm_free(stop->uuid);
+    crm_free(stop->task);
+    stop->task = crm_strdup(RSC_MIGRATE);
+    stop->uuid = generate_op_key(rsc->id, stop->task, 0);
+    add_hash_param(stop->meta, "migrate_source",
+		   stop->node->details->uname);
+    add_hash_param(stop->meta, "migrate_target",
+		   start->node->details->uname);
 
-		/* Create the correct ordering ajustments based on find_clone_activity_on(); */
+    /* Create the correct ordering ajustments based on find_clone_activity_on(); */
 		
+    slist_iter(
+	constraint, rsc_colocation_t, rsc->rsc_cons, lpc,
+
+	resource_t *target = constraint->rsc_rh;
+	crm_info("Repairing %s: %s == %s (%d)", constraint->id, rsc->id, target->id, constraint->score);
+
+	if(constraint->score > 0) {
+	    int mode = check_stack_element(rsc, target, "coloc");
+	    action_t *clone_stop = find_first_action(target->actions, NULL, RSC_STOP, NULL);
+	    action_t *clone_start = find_first_action(target->actions, NULL, RSC_STARTED, NULL);
+
+	    CRM_ASSERT(clone_stop != NULL);
+	    CRM_ASSERT(clone_start != NULL);
+	    CRM_ASSERT((mode & stack_middle) == 0);
+	    CRM_ASSERT(((mode & stack_stopping) && (mode & stack_starting)) == 0);
+
+	    if(mode & stack_stopping) {
+		action_t *clone_stop = find_first_action(target->actions, NULL, RSC_STOP, NULL);
+		action_t *clone_start = find_first_action(target->actions, NULL, RSC_STARTED, NULL);
+		crm_debug("Creating %s.start -> %s.stop ordering", rsc->id, target->id);
+
+		order_actions(start, clone_stop, pe_order_optional);
+
 		slist_iter(
-		    constraint, rsc_colocation_t, rsc->rsc_cons, lpc,
-		    
-		    resource_t *target = constraint->rsc_rh;
-		    crm_info("Repairing %s: %s == %s (%d)", constraint->id, rsc->id, target->id, constraint->score);
-
-		    if(constraint->score > 0) {
-			int mode = check_stack_element(rsc, target, "coloc");
-			action_t *clone_stop = find_first_action(target->actions, NULL, RSC_STOP, NULL);
-			action_t *clone_start = find_first_action(target->actions, NULL, RSC_STARTED, NULL);
-
-			CRM_ASSERT(clone_stop != NULL);
-			CRM_ASSERT(clone_start != NULL);
-			CRM_ASSERT((mode & stack_middle) == 0);
-			CRM_ASSERT(((mode & stack_stopping) && (mode & stack_starting)) == 0);
-			
-			if(mode & stack_stopping) {
-			    action_t *clone_stop = find_first_action(target->actions, NULL, RSC_STOP, NULL);
-			    action_t *clone_start = find_first_action(target->actions, NULL, RSC_STARTED, NULL);
-			    crm_debug("Creating %s.start -> %s.stop ordering", rsc->id, target->id);
-
-			    order_actions(start, clone_stop, pe_order_optional);
-
-			    slist_iter(
-				other_w, action_wrapper_t, start->actions_before, lpc2,
-				/* Needed if the clone's started pseudo-action ever gets printed in the graph */ 
-				if(other_w->action == clone_start) {
-				    crm_debug("Breaking %s -> %s ordering", other_w->action->uuid, start->uuid);
-				    other_w->type = pe_order_none;
-				}
-				);
-			    
-			} else if(mode & stack_starting) {
-			    crm_debug("Creating %s.started -> %s.stop ordering", target->id, rsc->id);
-
-			    order_actions(clone_start, stop, pe_order_optional);
-			    
-			    slist_iter(
-				other_w, action_wrapper_t, clone_stop->actions_before, lpc2,
-				/* Needed if the clone's stop pseudo-action ever gets printed in the graph */ 
-				if(other_w->action == stop) {
-				    crm_debug("Breaking %s -> %s ordering", other_w->action->uuid, clone_stop->uuid);
-				    other_w->type = pe_order_none;
-				}
-				);
-			}
+		    other_w, action_wrapper_t, start->actions_before, lpc2,
+		    /* Needed if the clone's started pseudo-action ever gets printed in the graph */ 
+		    if(other_w->action == clone_start) {
+			crm_debug("Breaking %s -> %s ordering", other_w->action->uuid, start->uuid);
+			other_w->type = pe_order_none;
 		    }
 		    );
 
-		crm_free(start->uuid);
-		crm_free(start->task);
-		start->task = crm_strdup(RSC_MIGRATED);
-		start->uuid = generate_op_key(rsc->id, start->task, 0);
-		add_hash_param(start->meta, "migrate_source_uuid", stop->node->details->id);
-		add_hash_param(start->meta, "migrate_source", stop->node->details->uname);
-		add_hash_param(start->meta, "migrate_target", start->node->details->uname);
+	    } else if(mode & stack_starting) {
+		crm_debug("Creating %s.started -> %s.stop ordering", target->id, rsc->id);
 
-		/* Anything that needed stop to complete, now also needs start to have completed */
- 		slist_iter(
-			other_w, action_wrapper_t, stop->actions_after, lpc,
-			other = other_w->action;
-			if(other->optional || other->rsc != NULL) {
-			    continue;
-			}
-			crm_debug("Ordering %s before %s (stop)", start->uuid, other_w->action->uuid);
-			order_actions(start, other, other_w->type);
+		order_actions(clone_start, stop, pe_order_optional);
+			    
+		slist_iter(
+		    other_w, action_wrapper_t, clone_stop->actions_before, lpc2,
+		    /* Needed if the clone's stop pseudo-action ever gets printed in the graph */ 
+		    if(other_w->action == stop) {
+			crm_debug("Breaking %s -> %s ordering", other_w->action->uuid, clone_stop->uuid);
+			other_w->type = pe_order_none;
+		    }
 		    );
-
-		/* Stop also needs anything that the start needed to have completed too */
- 		slist_iter(
-			other_w, action_wrapper_t, start->actions_before, lpc,
-			other = other_w->action;
-			if(other->rsc == NULL) {
-			    /* nothing */
-			} else if(other->optional || other->rsc == rsc || other->rsc == rsc->parent) {
-			    continue;
-			}
-			crm_debug("Ordering %s before %s (start)", other_w->action->uuid, stop->uuid);
-			order_actions(other, stop, other_w->type);
-		    );
-
-		/* Overwrite any op-specific params with those from the migrate ops */
-		from = custom_action(
-		    rsc, crm_strdup(start->uuid), start->task, start->node,
-		    FALSE, FALSE, data_set);
-		g_hash_table_foreach(start->meta, append_hashtable, from->meta);
-		g_hash_table_destroy(start->meta);
-		start->meta = from->meta;
-		from->meta = NULL;
-		pe_free_action(from);
-
-		to = custom_action(
-		    rsc, crm_strdup(stop->uuid), stop->task, stop->node,
-		    FALSE, FALSE, data_set);
-		g_hash_table_foreach(stop->meta, append_hashtable, to->meta);
-		g_hash_table_destroy(stop->meta);
-		stop->meta = to->meta;
-		to->meta = NULL;
-		pe_free_action(to);
-		
-	} else if(start && stop
-		  && start->allow_reload_conversion
-		  && stop->node->details == start->node->details) {
-		action_t *rewrite = NULL;
-
-		start->pseudo = TRUE; /* easier than trying to delete it from the graph */
-
-		action = NULL;
-		key = promote_key(rsc);
-		action_list = find_actions(rsc->actions, key, NULL);
-		if(action_list) {
-		    action = action_list->data;
-		}
-		if(action && action->optional == FALSE) {
-		    action->pseudo = TRUE;
-		}
-		g_list_free(action_list);
-		crm_free(key);
-
-		action = NULL;
-		key = demote_key(rsc);
-		action_list = find_actions(rsc->actions, key, NULL);
-		if(action_list) {
-		    action = action_list->data;
-		}
-		g_list_free(action_list);
-		crm_free(key);
-
-		if(action && action->optional == FALSE) {
-		    rewrite = action;
-		    stop->pseudo = TRUE;
-		    
-		} else {
-		    rewrite = stop;
-		}
-		crm_info("Rewriting %s of %s on %s as a reload",
-			 rewrite->task, rsc->id, stop->node->details->uname);
-		
-		crm_free(rewrite->uuid);
-		crm_free(rewrite->task);
-		rewrite->task = crm_strdup("reload");
-		rewrite->uuid = generate_op_key(rsc->id, rewrite->task, 0);
-		
-	} else {
-		do_crm_log_unlikely(level+1, "%s nothing to do", rsc->id);
+	    }
 	}
+	);
+
+    crm_free(start->uuid);
+    crm_free(start->task);
+    start->task = crm_strdup(RSC_MIGRATED);
+    start->uuid = generate_op_key(rsc->id, start->task, 0);
+    add_hash_param(start->meta, "migrate_source_uuid", stop->node->details->id);
+    add_hash_param(start->meta, "migrate_source", stop->node->details->uname);
+    add_hash_param(start->meta, "migrate_target", start->node->details->uname);
+
+    /* Anything that needed stop to complete, now also needs start to have completed */
+    slist_iter(
+	other_w, action_wrapper_t, stop->actions_after, lpc,
+	other = other_w->action;
+	if(other->optional || other->rsc != NULL) {
+	    continue;
+	}
+	crm_debug("Ordering %s before %s (stop)", start->uuid, other_w->action->uuid);
+	order_actions(start, other, other_w->type);
+	);
+
+    /* Stop also needs anything that the start needed to have completed too */
+    slist_iter(
+	other_w, action_wrapper_t, start->actions_before, lpc,
+	other = other_w->action;
+	if(other->rsc == NULL) {
+	    /* nothing */
+	} else if(other->optional || other->rsc == rsc || other->rsc == rsc->parent) {
+	    continue;
+	}
+	crm_debug("Ordering %s before %s (start)", other_w->action->uuid, stop->uuid);
+	order_actions(other, stop, other_w->type);
+	);
+
+    /* Overwrite any op-specific params with those from the migrate ops */
+    from = custom_action(
+	rsc, crm_strdup(start->uuid), start->task, start->node,
+	FALSE, FALSE, data_set);
+    g_hash_table_foreach(start->meta, append_hashtable, from->meta);
+    g_hash_table_destroy(start->meta);
+    start->meta = from->meta;
+    from->meta = NULL;
+    pe_free_action(from);
+
+    to = custom_action(
+	rsc, crm_strdup(stop->uuid), stop->task, stop->node,
+	FALSE, FALSE, data_set);
+    g_hash_table_foreach(stop->meta, append_hashtable, to->meta);
+    g_hash_table_destroy(stop->meta);
+    stop->meta = to->meta;
+    to->meta = NULL;
+    pe_free_action(to);
+}
+
+static void
+ReloadRsc(resource_t * rsc, action_t *stop, action_t *start, pe_working_set_t * data_set)
+{
+    action_t *action = NULL;
+    action_t *rewrite = NULL;
+
+    if(is_not_set(rsc->flags, pe_rsc_try_reload)) {
+        return;
+
+    } else if(stop->optional == FALSE) {
+        crm_debug_2("%s: stop action", rsc->id);
+        return;
+
+    } else if(start->optional == FALSE) {
+        crm_debug_2("%s: start action", rsc->id);
+        return;
+    }
+
+    action = get_first_named_action(rsc, RSC_PROMOTE, TRUE);
+    if (action && action->optional == FALSE) {
+	action->pseudo = TRUE;
+    }
+
+    action = get_first_named_action(rsc, RSC_DEMOTE, TRUE);
+    if (action && action->optional == FALSE) {
+        rewrite = action;
+	stop->pseudo = TRUE;
+
+    } else {
+        rewrite = start;
+    }
+
+    crm_info("Rewriting %s of %s on %s as a reload",
+             rewrite->task, rsc->id, stop->node->details->uname);
+    set_bit(rsc->flags, pe_rsc_reload);
+    rewrite->optional = FALSE;
+
+    crm_free(rewrite->uuid);
+    crm_free(rewrite->task);
+    rewrite->task = crm_strdup("reload");
+    rewrite->uuid = generate_op_key(rsc->id, rewrite->task, 0);
+}
+
+void
+complex_migrate_reload(resource_t *rsc, pe_working_set_t *data_set)
+{
+    GListPtr gIter = NULL;
+    action_t *stop = NULL;
+    action_t *start = NULL;
+
+    if (rsc->children) {
+        for (gIter = rsc->children; gIter != NULL; gIter = gIter->next) {
+            resource_t *child_rsc = (resource_t *) gIter->data;
+
+	    child_rsc->cmds->migrate_reload(child_rsc, data_set);
+	}
+        return;
+
+    } else if (rsc->variant > pe_native) {
+        return;
+    }
+
+    crm_debug_2("Processing %s", rsc->id);
+
+    if(is_not_set(rsc->flags, pe_rsc_managed)
+       || is_set(rsc->flags, pe_rsc_failed)
+       || is_set(rsc->flags, pe_rsc_start_pending)
+       || rsc->next_role < RSC_ROLE_STARTED
+       || g_list_length(rsc->running_on) != 1) {
+        crm_debug_2("%s: general resource state: flags=0x%.16llx",
+		    rsc->id, rsc->flags);
+	return;
+    }
+
+    start = get_first_named_action(rsc, RSC_START, TRUE);
+    stop = get_first_named_action(rsc, RSC_STOP, TRUE);
+
+    if(stop == NULL) {
+        return;
+
+    } else if (stop->optional && is_set(rsc->flags, pe_rsc_try_reload)) {
+        ReloadRsc(rsc, stop, start, data_set);
+
+    } else if(stop->optional == FALSE) {
+        MigrateRsc(rsc, stop, start, data_set);
+    }
 }
 
 void native_append_meta(resource_t *rsc, xmlNode *xml)

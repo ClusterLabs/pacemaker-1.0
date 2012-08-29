@@ -464,16 +464,23 @@ STONITH_PLUGIN_DIR="$libdir/stonith/plugins/stonith/"
 AC_DEFINE_UNQUOTED(STONITH_PLUGIN_DIR,"$STONITH_PLUGIN_DIR", Location for Stonith plugins)
 AC_SUBST(STONITH_PLUGIN_DIR)
 
-AC_PATH_PROGS(HG, hg false)
+AC_PATH_PROGS(GIT, git false)
 AC_MSG_CHECKING(build version)
-BUILD_VERSION=unknown
-if test -f $srcdir/.hg_archival.txt; then
-   BUILD_VERSION=`cat $srcdir/.hg_archival.txt | awk '/node:/ { print $2 }'`
-elif test -x $HG -a -d .hg; then
-   BUILD_VERSION=`$HG id -itb`
-   if test $? != 0; then
-       BUILD_VERSION=unknown
-   fi
+
+BUILD_VERSION=$Format:%h$
+if test $BUILD_VERSION != ":%h$"; then
+   AC_MSG_RESULT(archive hash: $BUILD_VERSION)
+
+elif test -x $GIT -a -d .git; then
+   BUILD_VERSION=`$GIT log --pretty="format:%h" -n 1`
+   AC_MSG_RESULT(git hash: $BUILD_VERSION)
+
+else
+   # The current directory name make a reasonable default
+   # Most generated archives will include the hash or tag
+   BASE=`basename $PWD`
+   BUILD_VERSION=`echo $BASE | sed s:.*[[Pp]]acemaker-::`
+   AC_MSG_RESULT(directory based hash: $BUILD_VERSION)
 fi
 
 AC_DEFINE_UNQUOTED(BUILD_VERSION, "$BUILD_VERSION", Build version)
@@ -503,7 +510,6 @@ AC_PATH_PROGS(INKSCAPE, inkscape)
 AC_PATH_PROGS(FOP, fop)
 AC_PATH_PROGS(SSH, ssh, /usr/bin/ssh)
 AC_PATH_PROGS(SCP, scp, /usr/bin/scp)
-AC_PATH_PROGS(HG, hg, /bin/false)
 AC_PATH_PROGS(TAR, tar)
 AC_PATH_PROGS(MD5, md5)
 AC_PATH_PROGS(TEST, test)

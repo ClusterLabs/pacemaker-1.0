@@ -305,6 +305,18 @@ add_list_element(char *list, const char *value)
     return list;
 }
 
+static char *
+convert_host_list(GListPtr glist)
+{
+    char *result = NULL;
+    GListPtr gIter = NULL;
+    for (gIter = glist; gIter != NULL; gIter = gIter->next) {
+	const char *host = (const char *)gIter->data;
+	result = add_list_element(result, host);
+    }
+    return result;
+}
+
 static void
 short_print(char *list, const char *prefix, const char *type, long options, void *print_data) 
 {
@@ -333,6 +345,8 @@ void clone_print(
     char *master_list = NULL;
     char *started_list = NULL;
     char *stopped_list = NULL;
+    GListPtr master_sort_glist = NULL;
+    GListPtr started_sort_glist = NULL;
     const char *type = "Clone";
     clone_variant_data_t *clone_data = NULL;
     get_clone_variant_data(clone_data, rsc);
@@ -389,11 +403,18 @@ void clone_print(
 
 		if(a_role > RSC_ROLE_SLAVE) {
 		    /* And active on a single node as master */
-		    master_list = add_list_element(master_list, host);
-		    
+		    if (options & pe_print_sort)  {
+			master_sort_glist = g_list_insert_sorted(master_sort_glist, (gpointer)host, (GCompareFunc)strcmp);
+		    } else {
+			master_list = add_list_element(master_list, host);
+		    }
 		} else {
 		    /* And active on a single node as started/slave */
-		    started_list = add_list_element(started_list, host);
+		    if (options & pe_print_sort)  {
+			started_sort_glist = g_list_insert_sorted(started_sort_glist, (gpointer)host, (GCompareFunc)strcmp);
+		    } else {
+			started_list = add_list_element(started_list, host);
+		    }
 		}
 	    
 	    } else {
@@ -419,6 +440,11 @@ void clone_print(
 	    
 	);
 	
+    if (options & pe_print_sort)  {
+	master_list = convert_host_list(master_sort_glist);
+	started_list = convert_host_list(started_sort_glist);
+    }
+
     short_print(master_list, child_text, "Masters", options, print_data);
     short_print(started_list, child_text, rsc->variant==pe_master?"Slaves":"Started", options, print_data);
     short_print(stopped_list, child_text, "Stopped", options, print_data);
@@ -426,6 +452,12 @@ void clone_print(
     crm_free(master_list);
     crm_free(started_list);
     crm_free(stopped_list);    
+    if (master_sort_glist) {
+	g_list_free(master_sort_glist);
+    }
+    if (started_sort_glist) {
+	g_list_free(started_sort_glist);
+    }
     
     if(options & pe_print_html) {
 	status_print("</ul>\n");

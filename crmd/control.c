@@ -292,8 +292,10 @@ log_connected_client(gpointer key, gpointer value, gpointer user_data)
 
 static void free_mem(fsa_data_t *msg_data) 
 {
-	g_main_loop_quit(crmd_mainloop);
-	g_main_loop_unref(crmd_mainloop);
+	if(crmd_mainloop) {
+		g_main_loop_quit(crmd_mainloop);
+		g_main_loop_unref(crmd_mainloop);
+	}
 	
 #if SUPPORT_HEARTBEAT
 	if(fsa_cluster_conn) {

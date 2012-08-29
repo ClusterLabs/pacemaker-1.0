@@ -140,11 +140,13 @@ struct node_s {
 
 #define pe_rsc_notify		0x00000010ULL
 #define pe_rsc_unique		0x00000020ULL
-#define pe_rsc_can_migrate	0x00000040ULL
 
 #define pe_rsc_provisional	0x00000100ULL
 #define pe_rsc_allocating	0x00000200ULL
 #define pe_rsc_merging		0x00000400ULL
+
+#define pe_rsc_try_reload	0x00001000ULL
+#define pe_rsc_reload		0x00002000ULL
 
 #define pe_rsc_failed		0x00010000ULL
 #define pe_rsc_shutdown		0x00020000ULL
@@ -218,7 +220,7 @@ struct action_s
 		gboolean print_always;
 		gboolean failure_is_fatal;
 		gboolean implied_by_stonith;
-		gboolean allow_reload_conversion;
+		gboolean allow_reload_conversion; /* no longer used */
 
 		enum rsc_start_requirement needs;
 		enum action_fail_response  on_fail;

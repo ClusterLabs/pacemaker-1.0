@@ -133,4 +133,7 @@ extern gboolean ever_had_quorum;
 #include <fsa_proto.h>
 #include <crmd_utils.h>
 
+#define trigger_fsa(source) crm_debug_3("Triggering FSA: %s", __FUNCTION__); \
+	mainloop_set_trigger(source);
+
 #endif

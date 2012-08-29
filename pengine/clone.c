@@ -947,7 +947,9 @@ void clone_rsc_colocation_rh(
 	clone_variant_data_t *clone_data = NULL;
 	clone_variant_data_t *clone_data_lh = NULL;
 
-	CRM_CHECK(rsc_lh != NULL, return);
+	CRM_CHECK(constraint != NULL, return);
+	CRM_CHECK(rsc_lh != NULL, pe_err("rsc_lh was NULL for %s", constraint->id); return);
+	CRM_CHECK(rsc_rh != NULL, pe_err("rsc_rh was NULL for %s", constraint->id); return);
 	CRM_CHECK(rsc_lh->variant == pe_native, return);
 	
 	get_clone_variant_data(clone_data, constraint->rsc_rh);
@@ -957,7 +959,7 @@ void clone_rsc_colocation_rh(
 	if(constraint->rsc_lh->variant >= pe_clone) {
 
 	    get_clone_variant_data(clone_data_lh, constraint->rsc_lh);
-	    if(clone_data->clone_node_max != clone_data_lh->clone_node_max) {
+	    if (clone_data_lh->interleave && clone_data->clone_node_max != clone_data_lh->clone_node_max) {
 		crm_config_err("Cannot interleave "XML_CIB_TAG_INCARNATION
 			       " %s and %s because"
 			       " they do not support the same number of"
@@ -970,11 +972,7 @@ void clone_rsc_colocation_rh(
 	    }
 	}
 
-	if(rsc_rh == NULL) {
-		pe_err("rsc_rh was NULL for %s", constraint->id);
-		return;
-		
-	} else if(is_set(rsc_rh->flags, pe_rsc_provisional)) {
+	if(is_set(rsc_rh->flags, pe_rsc_provisional)) {
 		crm_debug_3("%s is still provisional", rsc_rh->id);
 		return;
 

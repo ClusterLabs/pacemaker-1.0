@@ -607,15 +607,44 @@ decompress_file(const char *filename)
     return buffer;
 }
 
+static void strip_text_nodes(xmlNode *xml)
+{
+    xmlNode *iter = xml->children;
+
+    while (iter) {
+        xmlNode *next = iter->next;
+
+        switch(iter->type) {
+            case XML_TEXT_NODE:
+                /* Remove it */
+                xmlUnlinkNode(iter);
+                xmlFreeNode(iter);
+                break;
+
+            case XML_ELEMENT_NODE:
+                /* Search it */
+                strip_text_nodes(iter);
+                break;
+
+            default:
+                /* Leave it */
+                break;
+        }
+
+        iter = next;
+    }
+}
+
 xmlNode *
 filename2xml(const char *filename)
 {
     xmlNode *xml = NULL;
     xmlDocPtr output = NULL;
+    const char *match = NULL;
     xmlParserCtxtPtr ctxt = NULL;
     xmlErrorPtr last_error = NULL;
     static int xml_options = XML_PARSE_NOBLANKS|XML_PARSE_RECOVER;
-    
+
     /* create a parser context */
     ctxt = xmlNewParserCtxt();
     CRM_CHECK(ctxt != NULL, return NULL);
@@ -626,11 +655,15 @@ filename2xml(const char *filename)
     xmlSetGenericErrorFunc(ctxt, crm_xml_err);
     /* initGenericErrorDefaultFunc(crm_xml_err); */
 
+    if(filename) {
+        match = strstr(filename, ".bz2");
+    }
+
     if(filename == NULL) {
 	/* STDIN_FILENO == fileno(stdin) */
 	output = xmlCtxtReadFd(ctxt, STDIN_FILENO, "unknown.xml", NULL, xml_options);
 
-    } else if(strstr(filename, ".bz2") == NULL) {
+    } else if(match == NULL || match[4] != 0) {
 	output = xmlCtxtReadFile(ctxt, filename, NULL, xml_options);
 
     } else {
@@ -639,8 +672,8 @@ filename2xml(const char *filename)
 	crm_free(input);
     }
 
-    if(output) {
-	xml = xmlDocGetRootElement(output);
+    if(output && (xml = xmlDocGetRootElement(output))) {
+	strip_text_nodes(xml);
     }
     
     last_error = xmlCtxtGetLastError(ctxt);

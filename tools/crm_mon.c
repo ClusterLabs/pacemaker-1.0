@@ -297,13 +297,13 @@ static struct crm_option long_options[] = {
     {"xml-file",       1, 0, 'x', NULL, 1},
 
     {"-spacer-",	1, 0, '-', "\nExamples:", pcmk_option_paragraph},
-    {"-spacer-",	1, 0, '-', "Display the cluster´s status on the console with updates as they occur:", pcmk_option_paragraph},
+    {"-spacer-",	1, 0, '-', "Display the cluster status on the console with updates as they occur:", pcmk_option_paragraph},
     {"-spacer-",	1, 0, '-', " crm_mon", pcmk_option_example},
-    {"-spacer-",	1, 0, '-', "Display the cluster´s status on the console just once then exit:", pcmk_option_paragraph},
+    {"-spacer-",	1, 0, '-', "Display the cluster status on the console just once then exit:", pcmk_option_paragraph},
     {"-spacer-",	1, 0, '-', " crm_mon -1", pcmk_option_example},
-    {"-spacer-",	1, 0, '-', "Display your cluster´s status, group resources by node, and include inactive resources in the list:", pcmk_option_paragraph},
+    {"-spacer-",	1, 0, '-', "Display your cluster status, group resources by node, and include inactive resources in the list:", pcmk_option_paragraph},
     {"-spacer-",	1, 0, '-', " crm_mon --group-by-node --inactive", pcmk_option_example},
-    {"-spacer-",	1, 0, '-', "Start crm_mon as a background daemon and have it write the cluster´s status to an HTML file:", pcmk_option_paragraph},
+    {"-spacer-",	1, 0, '-', "Start crm_mon as a background daemon and have it write the cluster status to an HTML file:", pcmk_option_paragraph},
     {"-spacer-",	1, 0, '-', " crm_mon --daemonize --as-html /path/to/docroot/filename.html", pcmk_option_example},
     {"-spacer-",	1, 0, '-', "Start crm_mon as a background daemon and have it send email alerts:", pcmk_option_paragraph|!ENABLE_ESMTP},
     {"-spacer-",	1, 0, '-', " crm_mon --daemonize --mail-to user@example.com --mail-host mail.example.com", pcmk_option_example|!ENABLE_ESMTP},
@@ -840,10 +840,11 @@ print_node_attribute(gpointer name, gpointer node_data)
     print_as("\n");
 }
 
+#define STATUS_PATH_MAX 512
 static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 {
     xmlNode *lrm_rsc = NULL;
-    xmlNode *cib_status = get_object_root(XML_CIB_TAG_STATUS, data_set->input);
+    GListPtr gIter = NULL;
 
     if(operations) {
 	print_as("\nOperations:\n");
@@ -851,13 +852,20 @@ static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 	print_as("\nMigration summary:\n");
     }
     
-    xml_child_iter_filter(
-	cib_status, node_state, XML_CIB_TAG_STATE,
-	node_t *node = pe_find_node_id(data_set->nodes, ID(node_state));
+    for (gIter = data_set->nodes; gIter != NULL; gIter = gIter->next) {
+        node_t *node = (node_t *) gIter->data;
+        xmlNode *node_state = NULL;
+        char xpath[STATUS_PATH_MAX];
+
 	if(node == NULL || node->details->online == FALSE){
 	    continue;
 	}
-	
+	snprintf(xpath, STATUS_PATH_MAX, "//node_state[@id='%s']", node->details->id);
+	node_state = get_xpath_object(xpath, data_set->input, LOG_DEBUG);
+	if (node_state == NULL) {
+	    continue;
+	}
+
 	print_as("* Node %s: ", crm_element_value(node_state, XML_ATTR_UNAME));
 	if(!print_nodes_attr) {
 	    get_ping_score(node, data_set);
@@ -883,7 +891,7 @@ static void print_node_summary(pe_working_set_t *data_set, gboolean operations)
 		}
 	    }
 	    );
-	);
+    }
 }
 
 static char *
@@ -1068,11 +1076,11 @@ print_status(pe_working_set_t *data_set)
 				   
 		   } else if(group_by_node == FALSE) {
 		       if(partially_active || inactive_resources) {
-			   rsc->fns->print(rsc, NULL, print_opts, stdout);
+			   rsc->fns->print(rsc, NULL, print_opts|pe_print_sort, stdout);
 		       }
 				   
 		   } else if(is_active == FALSE && inactive_resources) {
-		       rsc->fns->print(rsc, NULL, print_opts, stdout);
+		       rsc->fns->print(rsc, NULL, print_opts|pe_print_sort, stdout);
 		   }
 	    );
     }
@@ -1262,11 +1270,11 @@ print_html_status(pe_working_set_t *data_set, const char *filename, gboolean web
 				   
 		   } else if(group_by_node == FALSE) {
 		       if(partially_active || inactive_resources) {
-			   rsc->fns->print(rsc, NULL, pe_print_html, stream);
+			   rsc->fns->print(rsc, NULL, pe_print_html|pe_print_sort, stream);
 		       }
 				   
 		   } else if(is_active == FALSE && inactive_resources) {
-		       rsc->fns->print(rsc, NULL, pe_print_html, stream);
+		       rsc->fns->print(rsc, NULL, pe_print_html|pe_print_sort, stream);
 		   }
 	    );
     }
@@ -1584,6 +1592,8 @@ send_smtp_trap(const char *node, const char *rsc, const char *task, int target_r
     char crm_mail_body[BODY_MAX];
     char *crm_mail_subject = NULL;
     
+    memset(&sa, 0, sizeof(struct sigaction));
+
     if(node == NULL) {
 	node = "-";
     }
@@ -1872,6 +1882,15 @@ crm_diff_update(const char *event, xmlNode *msg)
     free_xml(cib_last);
 }
 
+static gint
+sort_nodes_uname(gconstpointer a, gconstpointer b)
+{
+    const node_t *na = a;
+    const node_t *nb = b;
+
+    return strcmp(na->details->uname, nb->details->uname);
+}
+
 gboolean
 mon_refresh_display(gpointer user_data) 
 {
@@ -1892,7 +1911,8 @@ mon_refresh_display(gpointer user_data)
 
     set_working_set_defaults(&data_set);
     data_set.input = cib_copy;
-    cluster_status(&data_set);	
+    cluster_status(&data_set);
+    data_set.nodes = g_list_sort(data_set.nodes, sort_nodes_uname);
 
     if(as_html_file || web_cgi) {
 	if (print_html_status(&data_set, as_html_file, web_cgi) != 0) {

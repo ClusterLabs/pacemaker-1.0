@@ -9,16 +9,6 @@ group_color: iscsi-pool-0-target allocation score on s01-1: 0
 group_color: iscsi-pool-0-target allocation score on s01-0: 1000
 group_color: iscsi-pool-0-lun-1 allocation score on s01-1: 0
 group_color: iscsi-pool-0-lun-1 allocation score on s01-0: 0
-clone_color: cl-ietd allocation score on s01-1: 1000
-clone_color: cl-ietd allocation score on s01-0: 1000
-clone_color: ietd:0 allocation score on s01-1: 0
-clone_color: ietd:0 allocation score on s01-0: 1
-clone_color: ietd:1 allocation score on s01-1: 1
-clone_color: ietd:1 allocation score on s01-0: 0
-native_color: ietd:0 allocation score on s01-1: 0
-native_color: ietd:0 allocation score on s01-0: 1
-native_color: ietd:1 allocation score on s01-1: 1
-native_color: ietd:1 allocation score on s01-0: -1000000
 clone_color: ms-drbd-pool-0 allocation score on s01-1: 0
 clone_color: ms-drbd-pool-0 allocation score on s01-0: 1000
 clone_color: drbd-pool-0:0 allocation score on s01-1: 0
@@ -31,6 +21,16 @@ native_color: drbd-pool-0:1 allocation score on s01-1: 10001
 native_color: drbd-pool-0:1 allocation score on s01-0: -1000000
 drbd-pool-0:0 promotion score on s01-0: 12000
 drbd-pool-0:1 promotion score on s01-1: 10000
+clone_color: cl-ietd allocation score on s01-1: 1000
+clone_color: cl-ietd allocation score on s01-0: 11001
+clone_color: ietd:0 allocation score on s01-1: 0
+clone_color: ietd:0 allocation score on s01-0: 1
+clone_color: ietd:1 allocation score on s01-1: 1
+clone_color: ietd:1 allocation score on s01-0: 0
+native_color: ietd:0 allocation score on s01-1: 0
+native_color: ietd:0 allocation score on s01-0: 1
+native_color: ietd:1 allocation score on s01-1: 1
+native_color: ietd:1 allocation score on s01-0: -1000000
 native_color: iscsi-pool-0-target allocation score on s01-1: -1000000
 native_color: iscsi-pool-0-target allocation score on s01-0: 11001
 native_color: iscsi-pool-0-lun-1 allocation score on s01-1: -1000000

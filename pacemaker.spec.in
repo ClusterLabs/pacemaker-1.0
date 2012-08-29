@@ -3,7 +3,7 @@
 %global pcmk_docdir %{_docdir}/%{name}
 
 %global specversion 1
-%global upstream_version 00c6e47d32f3
+%global upstream_version HEAD
 %global upstream_prefix pacemaker
 
 # Compatibility macros for distros (fedora) that don't provide Python macros by default
@@ -34,7 +34,7 @@
 %bcond_with pre_release
 
 %if %{with pre_release}
-%global pcmk_release 0.%{specversion}.%{upstream_version}.hg
+%global pcmk_release 0.%{specversion}.%{upstream_version}.git
 %else
 %global pcmk_release %{specversion}
 %endif
@@ -68,7 +68,15 @@ BuildRequires:  help2man tcpd-devel
 # Required for core functionality
 BuildRequires:  automake autoconf libtool pkgconfig
 BuildRequires:	glib2-devel cluster-glue-libs-devel libxml2-devel libxslt-devel 
-BuildRequires:	pkgconfig python-devel gcc-c++ bzip2-devel gnutls-devel pam-devel libtool-ltdl-devel
+BuildRequires:	pkgconfig python-devel gcc-c++ bzip2-devel pam-devel libtool-ltdl-devel
+
+%if 0%{?suse_version} >= 1100
+# Renamed since opensuse-11.0
+BuildRequires:  libgnutls-devel
+%else
+BuildRequires:  gnutls-devel
+%endif
+
 
 # Enables optional functionality
 BuildRequires:	ncurses-devel openssl-devel libselinux-devel

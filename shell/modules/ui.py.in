@@ -61,6 +61,7 @@ class UserInterface(object):
     }
     def __init__(self):
         self.cmd_table = odict()
+        self.rev_alias_table = odict()
         self.cmd_table["help"] = (self.help,(0,1),0,0)
         self.cmd_table["quit"] = (self.exit,(0,0),0,0)
         self.cmd_table["end"] = (self.end,(0,1),0,0)
@@ -980,7 +981,9 @@ class NodeMgmt(UserInterface):
         setup_aliases(self)
     def status(self,cmd,node = None):
         'usage: status [<node>]'
-        return ext_cmd("%s -o nodes"%cib_dump) == 0
+        a = node and ('--xpath "//nodes/node[@uname=\'%s\']"' % node) or \
+            '-o nodes'
+        return ext_cmd("%s %s" % (cib_dump, a)) == 0
     def show(self,cmd,node = None):
         'usage: show [<node>]'
         doc = cibdump2doc()
