@@ -549,6 +549,7 @@ AC_CHECK_LIB(dl, dlopen)			dnl -ldl (for Linux)
 AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
+AC_CHECK_FUNCS([sched_getparam sched_setparam sched_get_priority_min])
 AC_CHECK_LIB(uuid, uuid_parse)			dnl e2fsprogs
 AC_CHECK_LIB(uuid, uuid_create)			dnl ossp
 
