@@ -294,6 +294,7 @@ main(int argc, char **argv)
 			case 'p':
 				admin_input_stdin = TRUE;
 				break;
+			case 'N':
 			case 'h':
 				host = crm_strdup(optarg);
 				break;
