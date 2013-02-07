@@ -124,7 +124,7 @@ class crm_ais(crm_lha):
                     "crmd:.*do_exit: Performing A_EXIT_1 - forcefully exiting the CRMd",
                     "verify_stopped: Resource .* was active at shutdown.  You may ignore this error if it is unmanaged.",
                     "ERROR: attrd_connection_destroy: Lost connection to attrd",
-                    "nfo: te_fence_node: Executing .* fencing operation",
+                    "info: te_fence_node: Executing .* fencing operation",
             ]
 
         fullcomplist["cib"] = Process(self, "cib", pats = [
