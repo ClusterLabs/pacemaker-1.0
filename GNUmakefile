@@ -20,13 +20,14 @@
 
 PACKAGE		?= pacemaker
 
-# Force 'make dist' to be consistent with 'make export' 
+# Force 'make dist' to be consistent with 'make export'
 distprefix		= ClusterLabs-$(PACKAGE)
 distdir			= $(distprefix)-$(TAG)
 TARFILE			= $(distdir).tar.gz
 DIST_ARCHIVES		= $(TARFILE)
 
 LAST_RELEASE		?= $(shell git tag -l | grep Pacemaker | sort -Vr | head -n 1)
+NEXT_RELEASE	?= $(shell test -e /Volumes || git tag -l | grep Pacemaker | sort -Vr | head -n 1 | awk -F. '/[0-9]+\./{$$3+=1;OFS=".";print $$1,$$2,$$3}')
 
 RPM_ROOT	= $(shell pwd)
 RPM_OPTS	= --define "_sourcedir $(RPM_ROOT)" 	\
@@ -44,7 +45,7 @@ getdistro = $(shell test -e /etc/SuSE-release || echo fedora; test -e /etc/SuSE-
 PROFILE ?= $(shell rpm --eval fedora-%{fedora}-%{_arch})
 DISTRO  ?= $(call getdistro)
 TAG     ?= $(shell git log --pretty="format:%h" -n 1)
-WITH    ?= 
+WITH    ?=
 
 BUILD_COUNTER	?= build.counter
 LAST_COUNT      = $(shell test ! -e $(BUILD_COUNTER) && echo 0; test -e $(BUILD_COUNTER) && cat $(BUILD_COUNTER))
@@ -54,7 +55,7 @@ initialize:
 	./autogen.sh
 	echo "Now run configure with any arguments (eg. --prefix) specific to your system"
 
-export: 
+export:
 	rm -f $(PACKAGE)-scratch.tar.* $(PACKAGE)-tip.tar.*
 	if [ ! -f $(TARFILE) ]; then						\
 	    rm -f $(PACKAGE).tar.*;						\
@@ -112,7 +113,7 @@ srpm-%:	export $(PACKAGE)-%.spec
 	rpmbuild -bs --define "dist .$*" $(RPM_OPTS) $(WITH)  $(PACKAGE).spec
 
 # eg. WITH="--with cman" make rpm
-mock-%: 
+mock-%:
 	make srpm-$(firstword $(shell echo $(@:mock-%=%) | tr '-' ' '))
 	-rm -rf $(RPM_ROOT)/mock
 	mock --root=$* --rebuild $(WITH) $(MOCK_OPTIONS) $(RPM_ROOT)/*.src.rpm
@@ -131,9 +132,9 @@ abi-www:       abi-check -u $(LAST_RELEASE) $(TAG)
 scratch:
 	make TAG=scratch mock
 
-deb:	
+deb:
 	echo To make create custom builds, edit the configure flags in debian/rules first
-	dpkg-buildpackage -rfakeroot -us -uc 
+	dpkg-buildpackage -rfakeroot -us -uc
 
 global: clean-generic
 	gtags -q
@@ -145,15 +146,16 @@ global-www: global-html
 	rsync -avzxlSD --progress HTML/ root@www.clusterlabs.org:/var/lib/global/$(PACKAGE)
 
 changes:
-	@printf "\n* `date +"%a %b %d %Y"` `git config user.name` <`git config user.email`> $(VERSION)-1"
-	@printf "\n- Update source tarball to Git revision: `git log --pretty=format:%h -n 1`"
-	@printf "\n- Statistics:\n"
-	@printf "  Changesets: `git log --pretty=format:'%h' --abbrev-commit -M $(LAST_RELEASE)..HEAD | wc -l`\n"
-	@printf "  Diff:      "
-	@git diff $(LAST_RELEASE)..HEAD | diffstat | tail -n 1
-	@printf "\n- Changes since $(LAST_RELEASE)\n"
-	@git log --pretty=format:'%s' --abbrev-commit -M $(LAST_RELEASE)..HEAD | sed 's:(transplanted.*::' | grep -v -e Dev: -e Low: -e Hg: -e "Added tag.*for changeset" | sort -uf 
-	@printf "\n"
+	@printf "\n* `date +"%a %b %d %Y"` `hg showconfig ui.username` $(NEXT_RELEASE)-1" > ChangeLog
+	@printf "\n- Update source tarball to revision: `git id`" >> ChangeLog
+	@printf "\n- Statistics:\n">> ChangeLog
+	@printf "  Changesets: `git log --pretty=format:'%h' $(LAST_RELEASE)..HEAD | wc -l`\n" >> ChangeLog
+	@printf "  Diff:      " >> ChangeLog
+	@git diff -r $(LAST_RELEASE)..HEAD --stat | tail -n 1 >> ChangeLog
+	@printf "\n- Changes since $(LAST_RELEASE)\n" >> ChangeLog
+	@git log --pretty=format:'  +%s' --abbrev-commit $(LAST_RELEASE)..HEAD | grep -e High: | sed -e s@High:@@ -e s@PE:@pengine:@ | sort -uf >> ChangeLog
+	@printf "\n">> ChangeLog
+	git show $(LAST_RELEASE):ChangeLog >> ChangeLog
 
 rel-tags: tags
 	find . -name TAGS -exec sed -i.sed 's:\(.*\)/\(.*\)/TAGS:\2/TAGS:g' \{\} \;
