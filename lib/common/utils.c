@@ -1490,7 +1490,7 @@ write_last_sequence(
 	if(max == 0) {
 		return;
 	}
-	if (sequence >= max) {
+	if (max > 0 && sequence >= max) {
 		sequence = 0;
 	}
 	

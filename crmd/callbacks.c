@@ -495,7 +495,6 @@ crmd_client_connect(IPC_Channel *client_channel, gpointer user_data)
 
 
 #if SUPPORT_HEARTBEAT
-static gboolean fsa_have_quorum = FALSE;
 
 gboolean ccm_dispatch(int fd, gpointer user_data)
 {
@@ -575,14 +574,13 @@ crmd_ccm_msg_callback(
 
 	if(update_quorum) {
 	    crm_have_quorum = ccm_have_quorum(event);
-	    crm_update_quorum(crm_have_quorum, FALSE);
-
 	    if(crm_have_quorum == FALSE) {
 		/* did we just loose quorum? */
-		if(fsa_have_quorum) {
+		if(fsa_has_quorum) {
 		    crm_info("Quorum lost: %s", ccm_event_name(event));
 		}
 	    }
+	    crm_update_quorum(crm_have_quorum, FALSE);
 	}
 	
 	if(update_cache) {

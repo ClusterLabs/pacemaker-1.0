@@ -216,6 +216,7 @@ do_test group15 "-ve group colocation"
 do_test bug-1573 "Partial stop of a group with two children"
 do_test bug-1718 "Mandatory group ordering - Stop group_FUN"
 do_test bug-lf-2422 "Dependancy on partially active group - stop ocfs:*"
+do_test group-fail "Ensure stop order is preserved for partially active groups"
 
 echo ""
 do_test clone-anon-probe-1 "Probe the correct (anonymous) clone instance for each node"
