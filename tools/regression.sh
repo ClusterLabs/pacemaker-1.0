@@ -12,6 +12,7 @@ fi
 num_errors=0
 num_passed=0
 GREP_OPTIONS=
+core=`dirname $0`
 
 function assert() {
     rc=$1; shift
