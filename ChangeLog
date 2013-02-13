@@ -1,3 +1,42 @@
+
+* Wed Feb 13 2013 Andrew Beekhof <andrew@beekhof.net> Pacemaker-1.0.13-1
+- Update source tarball to revision: fe0f133
+- Statistics:
+  Changesets: 129
+  Diff:       173 files changed, 12206 insertions(+), 767 deletions(-)
+
+- Changes since Pacemaker-1.0.12
+  + build: Fix compilation - crm_report is a script
+  + cib: Don't halt disk writes if the previous digest is missing
+  + cib: Fix coverity RESOURCE_LEAK defect
+  + Core: Avoid assertion error when underflowing days of the month in iso8601 date code
+  + Core: Correctly determine when an XML file should be decompressed
+  + Core: Ensure signals are handled eventually in the absense of timer sources or IPC messages
+  + Core: Strip text nodes from on disk xml files
+  + crmd: cl#5051 - Fixes file leak in pe ipc connection initialization.
+  + crmd: cl#5057 - Restart sub-systems correctly (bnc#755671)
+  + crmd: Fast-track shutdown if we couldn't request it via attrd
+  + crmd: Leave it up to the PE to decide which ops can/cannot be reload
+  + crmd: Prevent use-of-NULL when free'ing empty hashtables
+  + crmd: Supply format arguments in the correct order
+  + Fix memory leak in cib when writing the cib contents.
+  + legacy: Set to the minimum scheduling priority when using SCHED_RR policy (bnc#779259)
+  + pengine: Bug #5007, Fixes use of colocation constraints with multi-state resources
+  + pengine: Bug cl#5038 - Prevent restart of anonymous clones when clone-max decreases
+  + pengine: Bug cl#5101 - Ensure stop order is preserved for partially active groups
+  + pengine: cl#5069 - Honor 'on-fail=ignore' even when operation is disabled.
+  + pengine: cl#5072 - Fixes monitor op stopping after rsc promotion.
+  + pengine: Ensure post-migration stop actions occur before node shutdown
+  + pengine: Fix coverity REVERSE_INULL defects
+  + pengine: Fix use-after-free errors detected by coverity
+  + pengine: Fix use-after-free errors detected in check_action_definition() by coverity
+  + pengine: Prevent segfault when ensuring unmanaged resources don't prevent shutdown
+  + pengine: Reload of a resource no longer causes a restart of dependant resources
+  + RA: controld - use the correct dlm_controld when membership comes from corosync directly
+  + tools: crm_resource - Fix coverity FORWARD_NULL defect
+  + Tools: crm_shadow - Bug cl#5062 - Correctly set argv[0] when forking a shell process
+  + tools: Install crm_report
+
 * Wed Nov 23 2011 Andrew Beekhof <andrew@beekhof.net> 1.0.12-1
 - Update source tarball to Git revision: 6118778
 - Statistics:

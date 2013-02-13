@@ -4,7 +4,7 @@ dnl
 dnl License: GNU General Public License (GPL)
 
 dnl ===============================================
-dnl Bootstrap 
+dnl Bootstrap
 dnl ===============================================
 AC_PREREQ(2.53)
 
@@ -19,7 +19,7 @@ dnl     checks for compiler characteristics
 dnl     checks for library functions
 dnl     checks for system services
 
-AC_INIT(pacemaker, 1.0.12, pacemaker@oss.clusterlabs.org)
+AC_INIT(pacemaker, 1.0.13, pacemaker@oss.clusterlabs.org)
 CRM_DTD_VERSION="1.0"
 
 PCMK_FEATURES=""
@@ -60,7 +60,7 @@ PACKAGE_SERIES=`echo $PACKAGE_VERSION | awk -F. '{ print $1"."$2 }'`
 AC_SUBST(PACKAGE_SERIES)
 
 dnl automake >= 1.11 offers --enable-silent-rules for suppressing the output from
-dnl normal compilation.  When a failure occurs, it will then display the full 
+dnl normal compilation.  When a failure occurs, it will then display the full
 dnl command line
 dnl Wrap in m4_ifdef to avoid breaking on older platforms
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES])
@@ -92,7 +92,7 @@ AC_CHECK_SIZEOF(long long)
 AC_STRUCT_TIMEZONE
 
 dnl ===============================================
-dnl Helpers 
+dnl Helpers
 dnl ===============================================
 cc_supports_flag() {
          local CFLAGS="$@"
@@ -135,7 +135,7 @@ AC_ARG_ENABLE([fatal-warnings],
      [default=yes]])
 
 AC_ARG_ENABLE([quiet],
-[  --enable-quiet 
+[  --enable-quiet
      Supress make output unless there is an error
      [default=no]])
 
@@ -144,32 +144,32 @@ AC_ARG_ENABLE([thread-safe],
      [default=no]])
 
 AC_ARG_ENABLE([bundled-ltdl],
-[  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${PACKAGE} [default=no]]) 
+[  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${PACKAGE} [default=no]])
 LTDL_LIBS=""
 
 AC_ARG_WITH(ais,
-    [  --with-ais     
+    [  --with-ais
        Support the OpenAIS messaging and membership layer ],
     [ SUPPORT_AIS=$withval ],
     [ SUPPORT_AIS=try ],
 )
 
 AC_ARG_WITH(heartbeat,
-    [  --with-heartbeat     
+    [  --with-heartbeat
        Support the Heartbeat messaging and membership layer ],
     [ SUPPORT_HEARTBEAT=$withval ],
     [ SUPPORT_HEARTBEAT=try ],
 )
 
 AC_ARG_WITH(snmp,
-    [  --with-snmp     
+    [  --with-snmp
        Support the SNMP protocol ],
     [ SUPPORT_SNMP=$withval ],
     [ SUPPORT_SNMP=try ],
 )
 
 AC_ARG_WITH(esmtp,
-    [  --with-esmtp  
+    [  --with-esmtp
        Support the sending mail notifications with the esmtp library ],
     [ SUPPORT_ESMTP=$withval ],
     [ SUPPORT_ESMTP=try ],
@@ -178,11 +178,11 @@ AC_ARG_WITH(esmtp,
 AISPREFIX=""
 AC_ARG_WITH(ais-prefix,
     [  --with-ais-prefix=DIR  Prefix used when OpenAIS was installed [$prefix]],
-    [ AISPREFIX=$withval ], 
+    [ AISPREFIX=$withval ],
     [ AISPREFIX=$prefix ])
 
 LCRSODIR=""
-AC_ARG_WITH(lcrso-dir, 
+AC_ARG_WITH(lcrso-dir,
     [  --with-lcrso-dir=DIR   OpenAIS lcrso files. ],
     [ LCRSODIR="$withval" ])
 
@@ -264,7 +264,7 @@ case $libdir in
     ;;
 esac
 
-dnl Expand autoconf variables so that we dont end up with '${prefix}' 
+dnl Expand autoconf variables so that we dont end up with '${prefix}'
 dnl in #defines and python scripts
 dnl NOTE: Autoconf deliberately leaves them unexpanded to allow
 dnl    make exec_prefix=/foo install
@@ -297,7 +297,7 @@ AC_SUBST(docdir)
 for j in prefix exec_prefix bindir sbindir libexecdir datadir sysconfdir \
     sharedstatedir localstatedir libdir includedir oldincludedir infodir \
     mandir INITDIR docdir
-do 
+do
   dirname=`eval echo '${'${j}'}'`
   if
     test ! -d "$dirname"
@@ -309,7 +309,7 @@ done
 dnl This OS-based decision-making is poor autotools practice;
 dnl feature-based mechanisms are strongly preferred.
 dnl
-dnl So keep this section to a bare minimum; regard as a "necessary evil". 
+dnl So keep this section to a bare minimum; regard as a "necessary evil".
 
 case "$host_os" in
 *bsd*)		LIBS="-L/usr/local/lib"
@@ -318,18 +318,18 @@ case "$host_os" in
 		;;
 *solaris*)
 		;;
-*linux*)	
+*linux*)
 		AC_DEFINE_UNQUOTED(ON_LINUX, 1, Compiling for Linux platform)
   		CFLAGS="$CFLAGS -I${prefix}/include"
  		;;
-darwin*)	
+darwin*)
 		AC_DEFINE_UNQUOTED(ON_DARWIN, 1, Compiling for Darwin platform)
   		LIBS="$LIBS -L${prefix}/lib"
   		CFLAGS="$CFLAGS -I${prefix}/include"
 		;;
 esac
 
-dnl Eventually remove this 
+dnl Eventually remove this
 CFLAGS="$CFLAGS -I${prefix}/include/heartbeat"
 
 AC_SUBST(INIT_EXT)
@@ -360,14 +360,14 @@ AC_COMPILE_IFELSE(
 #include <stdlib.h>
       ],
       [
-int max = 512;	
+int max = 512;
 uint64_t bignum = 42;
 char *buffer = malloc(max);
 const char *random = "random";
 snprintf(buffer, max-1, "<quorum id=%lu quorate=%s/>", bignum, random);
 fprintf(stderr, "Result: %s\n", buffer);
       ]
-    )], 
+    )],
     [U64T="%lu"],
     [U64T="%llu"]
 )
@@ -570,7 +570,7 @@ else
         GPKGNAME="glib-2.0"
 fi
 
-if 
+if
    $PKGCONFIG --exists $GPKGNAME
 then
 	GLIBCONFIG="$PKGCONFIG $GPKGNAME"
@@ -581,7 +581,7 @@ else
 	$PKGCONFIG --cflags $GPKGNAME; echo $?
 	$PKGCONFIG $GPKGNAME; echo $?
 	set +x
-        
+
 	AC_MSG_ERROR(You need glib2-devel installed in order to build ${PACKAGE})
 fi
 AC_MSG_RESULT(using $GLIBCONFIG)
@@ -681,7 +681,7 @@ AC_CHECK_HEADERS(time.h)
 AC_CHECK_HEADERS(unistd.h)
 AC_CHECK_HEADERS(winsock.h)
 
-dnl These headers need prerequisits before the tests will pass 
+dnl These headers need prerequisits before the tests will pass
 dnl AC_CHECK_HEADERS(net/if.h)
 dnl AC_CHECK_HEADERS(netinet/icmp6.h)
 dnl AC_CHECK_HEADERS(netinet/ip6.h)
@@ -819,7 +819,7 @@ if test "x$CURSESLIBS" != "x"; then
 fi
 
 dnl Check for printw() prototype compatibility
-if test X"$CURSESLIBS" != X"" && cc_supports_flag -Wcast-qual && cc_supports_flag -Werror; then 
+if test X"$CURSESLIBS" != X"" && cc_supports_flag -Wcast-qual && cc_supports_flag -Werror; then
     AC_MSG_CHECKING(whether printw() requires argument of "const char *")
     ac_save_LIBS=$LIBS
     LIBS="$CURSESLIBS  $LIBS"
@@ -836,7 +836,7 @@ if test X"$CURSESLIBS" != X"" && cc_supports_flag -Wcast-qual && cc_supports_fla
 #endif
 	      ],
 	      [printw((const char *)"Test");]
-	    )], 
+	    )],
 	    [ac_cv_compatible_printw=yes],
 	    [ac_cv_compatible_printw=no]
     )
@@ -878,11 +878,11 @@ dnl    Cluster stack - Heartbeat
 dnl ========================================================================
 
 case $SUPPORT_HEARTBEAT in
-     1|yes|true) 
-        AC_CHECK_LIB(hbclient, ll_cluster_new, 
+     1|yes|true)
+        AC_CHECK_LIB(hbclient, ll_cluster_new,
    		[SUPPORT_HEARTBEAT=1], [AC_MSG_FAILURE(Unable to support Heartbeat: client libraries not found)]);;
      try)
-        AC_CHECK_LIB(hbclient, ll_cluster_new, 
+        AC_CHECK_LIB(hbclient, ll_cluster_new,
    		[SUPPORT_HEARTBEAT=1], [SUPPORT_HEARTBEAT=0]);;
      *) SUPPORT_HEARTBEAT=0;;
 esac
@@ -926,7 +926,7 @@ else
        AIS_VERSION="whitetank"
    else
        aisreason="Whitetank headers not found"
-   fi  
+   fi
 fi
 
 if test $AIS_VERSION != "none"; then
@@ -1029,7 +1029,7 @@ case $AIS_VERSION in
    	CFLAGS="$CFLAGS `$COROSYNC_PKG --cflags`"
 	AISMSGLIB=`$COROSYNC_PKG --libs`
 	;;
-    whitetank) 
+    whitetank)
 	AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
 	CFLAGS="$CFLAGS -I$AISPREFIX/include/openais"
 	AISMSGLIB="-L${AISLIB} -R${AISLIB} -lSaMsg"
@@ -1038,9 +1038,9 @@ case $AIS_VERSION in
      	SUPPORT_AIS=0
 	if test "x$aisreason" != x; then
      	  if test $missingisfatal = 0; then
-	    AC_MSG_WARN(Unable to support OpenAIS: $aisreason) 
+	    AC_MSG_WARN(Unable to support OpenAIS: $aisreason)
           else
-	    AC_MSG_FAILURE(Unable to support OpenAIS: $aisreason) 
+	    AC_MSG_FAILURE(Unable to support OpenAIS: $aisreason)
           fi
         fi
 	;;
@@ -1137,9 +1137,9 @@ else
    if test $SUPPORT_SNMP = no; then
    	SUPPORT_SNMP=0
      	if test $missingisfatal = 0; then
-	    AC_MSG_WARN(Unable to support SNMP) 
+	    AC_MSG_WARN(Unable to support SNMP)
         else
-	    AC_MSG_FAILURE(Unable to support SNMP) 
+	    AC_MSG_FAILURE(Unable to support SNMP)
         fi
    else
    	SUPPORT_SNMP=1
@@ -1196,9 +1196,9 @@ else
    if test $SUPPORT_ESMTP = no; then
    	SUPPORT_ESMTP=0
      	if test $missingisfatal = 0; then
-	    AC_MSG_WARN(Unable to support ESMTP) 
+	    AC_MSG_WARN(Unable to support ESMTP)
         else
-	    AC_MSG_FAILURE(Unable to support ESMTP) 
+	    AC_MSG_FAILURE(Unable to support ESMTP)
         fi
    else
    	SUPPORT_ESMTP=1
@@ -1288,7 +1288,7 @@ dnl
 dnl     strerror: returns a string that corresponds to an errno.
 dnl             A replacement function is supplied for it.
 dnl
-dnl     unsetenv: is some bsdish function that should also be avoided (No 
+dnl     unsetenv: is some bsdish function that should also be avoided (No
 dnl             replacement)
 dnl             A replacement function is supplied for it.
 dnl
@@ -1336,8 +1336,8 @@ else
 		-fstack-protector-all
 		-Wall
 		-Waggregate-return
-		-Wbad-function-cast 
-		-Wcast-align 
+		-Wbad-function-cast
+		-Wcast-align
 		-Wdeclaration-after-statement
 		-Wendif-labels
 		-Wfloat-equal
@@ -1345,13 +1345,13 @@ else
 		-Wformat-security
 		-Wformat-nonliteral
 		-Winline
-		-Wmissing-prototypes 
-		-Wmissing-declarations 
+		-Wmissing-prototypes
+		-Wmissing-declarations
 		-Wnested-externs
 		-Wno-long-long
 		-Wno-strict-aliasing
 		-Wno-unused-but-set-variable
-		-Wpointer-arith 
+		-Wpointer-arith
 		-Wstrict-prototypes
     		-Wunsigned-char
 		-Wwrite-strings"
@@ -1425,7 +1425,7 @@ AC_SUBST(LIBADD_INTL)	dnl extra flags for GNU gettext stuff...
 
 AC_SUBST(LOCALE)
 
-dnl Options for cleaning up the compiler output 
+dnl Options for cleaning up the compiler output
 QUIET_LIBTOOL_OPTS=""
 QUIET_MAKE_OPTS=""
 if test "x${enable_quiet}" = "xyes"; then
@@ -1504,7 +1504,7 @@ xml/Makefile							\
 	xml/nvset.rng						\
 		)
 
-dnl Now process the entire list of files added by previous 
+dnl Now process the entire list of files added by previous
 dnl  calls to AC_CONFIG_FILES()
 AC_OUTPUT()
 
@@ -1535,4 +1535,3 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([  CFLAGS                   = ${CFLAGS}])
 AC_MSG_RESULT([  Libraries                = ${LIBS}])
 AC_MSG_RESULT([  Stack Libraries          = ${CLUSTERLIBS}])
-

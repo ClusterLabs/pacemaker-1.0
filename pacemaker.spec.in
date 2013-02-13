@@ -41,7 +41,7 @@
 
 Name:		pacemaker
 Summary:	Scalable High-Availability cluster resource manager
-Version:	1.0.12
+Version:	1.0.13
 Release:	%{pcmk_release}%{?dist}
 License:	GPLv2+ and LGPLv2+
 Url:		http://www.clusterlabs.org
@@ -67,7 +67,7 @@ BuildRequires:  help2man tcpd-devel
 
 # Required for core functionality
 BuildRequires:  automake autoconf libtool pkgconfig
-BuildRequires:	glib2-devel cluster-glue-libs-devel libxml2-devel libxslt-devel 
+BuildRequires:	glib2-devel cluster-glue-libs-devel libxml2-devel libxslt-devel
 BuildRequires:	pkgconfig python-devel gcc-c++ bzip2-devel pam-devel libtool-ltdl-devel
 
 %if 0%{?suse_version} >= 1100
@@ -131,7 +131,7 @@ It will run scripts at initialization, when machines go up or down,
 when related resources fail and can be configured to periodically check
 resource health.
 
-%package -n pacemaker-libs-devel 
+%package -n pacemaker-libs-devel
 License:	GPLv2+ and LGPLv2+
 Summary:	Pacemaker development package
 Group:		Development/Libraries
@@ -187,7 +187,7 @@ find %{buildroot} -name '*.xml' -type f -print0 | xargs -0 chmod a-x
 find %{buildroot} -name '*.xsl' -type f -print0 | xargs -0 chmod a-x
 find %{buildroot} -name '*.rng' -type f -print0 | xargs -0 chmod a-x
 find %{buildroot} -name '*.dtd' -type f -print0 | xargs -0 chmod a-x
- 
+
 # Dont package static libs
 find %{buildroot} -name '*.a' -type f -print0 | xargs -0 rm -f
 find %{buildroot} -name '*.la' -type f -print0 | xargs -0 rm -f
@@ -383,7 +383,7 @@ rm -rf %{buildroot}
 - No longer remove RPATH data, it prevents us finding libperl.so and no other
   libraries were being hardcoded
 - Compile in support for heartbeat
-- Conditionally add heartbeat-devel and corosynclib-devel to the -devel requirements 
+- Conditionally add heartbeat-devel and corosynclib-devel to the -devel requirements
   depending on which stacks are supported
 
 * Mon Aug 17 2009 Andrew Beekhof <andrew@beekhof.net> - 1.0.5-1
@@ -413,7 +413,7 @@ rm -rf %{buildroot}
 * Fri Jul  24 2009 Andrew Beekhof <andrew@beekhof.net> - 1.0.4-3
 - Initial Fedora checkin
 - Include an AUTHORS and license file in each package
-- Change the library package name to pacemaker-libs to be more 
+- Change the library package name to pacemaker-libs to be more
   Fedora compliant
 - Remove execute permissions from xml related files
 - Reference the new cluster-glue devel package name
