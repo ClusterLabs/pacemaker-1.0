@@ -217,12 +217,22 @@ pingd_stop() {
     fi
     if [ ! -z $pid ]; then
 	kill -TERM $pid
-	rc=$?
 
-	if [ $rc = 0 -o $rc = 1 ]; then
-	    rm $OCF_RESKEY_pidfile
-	    exit $OCF_SUCCESS
-	fi
+	# stop waiting
+	shutdown_timeout=$((($OCF_RESKEY_CRM_meta_timeout/1000)-5))
+	count=0
+	while [ $count -lt $shutdown_timeout ]; do
+	    # check if process still exists
+	    kill -s 0 $pid > /dev/null 2>&1
+	    rc=$?
+	    if [ $rc -ne 0 ]; then
+		rm $OCF_RESKEY_pidfile
+		exit $OCF_SUCCESS
+	    fi
+	    count=$(expr $count + 1)
+	    sleep 1
+	    ocf_log info "pingd still hasn't stopped yet. Waiting..."
+    done 
 
 	ocf_log err "Unexpected result from kill -TERM $pid: $rc"
 	exit $OCF_ERR_GENERIC
