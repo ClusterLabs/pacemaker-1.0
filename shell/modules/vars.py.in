@@ -121,6 +121,7 @@ class Vars(Singleton):
         "ordered", "notify", "interleave", "globally-unique",
         "clone-max", "clone-node-max", "clone-state", "description",
     )
+    group_meta_attributes = ("ordered", "collocated")
     ms_meta_attributes = (
         "master-max", "master-node-max", "description",
     )
