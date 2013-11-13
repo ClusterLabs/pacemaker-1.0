@@ -183,7 +183,7 @@ do_te_invoke(long long action,
 		crm_debug("Cancelling the transition: %s",
 			  transition_graph->complete?"inactive":"active");
 		abort_transition(INFINITY, tg_restart, "Peer Cancelled", NULL);
-		if(transition_graph->complete == FALSE) {
+		if(transition_graph && transition_graph->complete == FALSE) {
 		    crmd_fsa_stall(NULL);
 		}
 
@@ -191,7 +191,7 @@ do_te_invoke(long long action,
 		crm_debug("Halting the transition: %s",
 			  transition_graph->complete?"inactive":"active");
 		abort_transition(INFINITY, tg_stop, "Peer Halt", NULL);
-		if(transition_graph->complete == FALSE) {
+		if(transition_graph && transition_graph->complete == FALSE) {
 		    crmd_fsa_stall(NULL);
 		}
 		
@@ -209,7 +209,7 @@ do_te_invoke(long long action,
 		    return;
 		}
 		
-		if(transition_graph->complete == FALSE) {
+		if(transition_graph && transition_graph->complete == FALSE) {
 			crm_info("Another transition is already active");
 			abort_transition(INFINITY, tg_restart, "Transition Active", NULL);
 			return;
