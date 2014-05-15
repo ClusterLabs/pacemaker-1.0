@@ -20,3 +20,4 @@ Known Issues
 * 5048	The cluster fails in the stop of the node.
 * 5120	Unnecessary Master/Slave resource restarts with co-locations
 * 5133	The strange behavior of Master/Slave when it failed to demote.
+* 5188  Change of the "globally-unique" attribute of the resource
