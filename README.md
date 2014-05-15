@@ -13,10 +13,10 @@ Additional detail on all bugs listed here can be found on http://bugs.clusterlab
 Known Issues
 ============
 
-5096	Ensure demote occurs before stop of multistate resource in Master role.
-5103	About the replacement of the master/slave resource.
-5211  Probe is not carried out. (When I execute crm_resource -C command.)
-5095	Unmanaged services should block shutdown unless in maintainence mode
-5048	The cluster fails in the stop of the node.
-5120	Unnecessary Master/Slave resource restarts with co-locations
-5133	The strange behavior of Master/Slave when it failed to demote.
+* 5096	Ensure demote occurs before stop of multistate resource in Master role.
+* 5103	About the replacement of the master/slave resource.
+* 5211  Probe is not carried out. (When I execute crm_resource -C command.)
+* 5095	Unmanaged services should block shutdown unless in maintainence mode
+* 5048	The cluster fails in the stop of the node.
+* 5120	Unnecessary Master/Slave resource restarts with co-locations
+* 5133	The strange behavior of Master/Slave when it failed to demote.
