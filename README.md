@@ -7,7 +7,7 @@ After lingering on in a zombie like state for a number of years, this codebase i
 Since its first release in October 2008, it recieved major updates until March 2010 and bugfixes until November 2013 (largely thanks to the efforts of NTT).
 It had a good run but like all good things must come to an end.
 
-Below is a list of known issues likely to be faced by the few remaining refugees that haven't switched to the 1.1 branch since it's introduction in early 2010.
+Below is a list of known issues likely to be faced by the few remaining refugees that haven't switched to the 1.1 branch since its introduction in early 2010.
 Additional detail on all bugs listed here can be found on http://bugs.clusterlabs.org
 
 Known Issues
